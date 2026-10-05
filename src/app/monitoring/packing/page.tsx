@@ -173,9 +173,9 @@ export default function PackingMonitor() {
   const fetchData = async () => {
     try {
       const [entryRes, mpRes, dashRes] = await Promise.all([
-        fetch("http://localhost:5055/packing-entry").then((res) => res.json()),
-        fetch("http://localhost:5055/manpower").then((res) => res.json()),
-        fetch("http://localhost:5055/dashboard").then((res) => res.json()),
+        fetch("http://10.10.10.5:5055/packing-entry").then((res) => res.json()),
+        fetch("http://10.10.10.5:5055/manpower").then((res) => res.json()),
+        fetch("http://10.10.10.5:5055/dashboard").then((res) => res.json()),
       ]);
       setManpower(mpRes);
       setCarry2r(dashRes.data2r || { plan2r: 0, notDone: 0 });

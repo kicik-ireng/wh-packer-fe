@@ -27,7 +27,7 @@ export default function DriverPage() {
   const fetchDrivers = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5055/driver", {
+      const res = await fetch("http://10.10.10.5:5055/driver", {
         credentials: "include",
       });
       const json = await res.json();
@@ -41,8 +41,8 @@ export default function DriverPage() {
   const handleSave = async (values: any) => {
     const method = formData.id ? "PATCH" : "POST";
     const url = formData.id
-      ? `http://localhost:5055/driver/${formData.id}`
-      : `http://localhost:5055/driver`;
+      ? `http://10.10.10.5:5055/driver/${formData.id}`
+      : `http://10.10.10.5:5055/driver`;
 
     try {
       const res = await fetch(url, {
@@ -66,7 +66,7 @@ export default function DriverPage() {
 
   const handleDelete = async (id: number) => {
     try {
-      await fetch(`http://localhost:5055/driver/${id}`, {
+      await fetch(`http://10.10.10.5:5055/driver/${id}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -96,9 +96,9 @@ export default function DriverPage() {
       disableSearch: true,
       render: (_: any, record: Driver) => (
         <Space>
-          <Button 
-            type="text" 
-            icon={<Pencil size={14} className="text-blue-500" />} 
+          <Button
+            type="text"
+            icon={<Pencil size={14} className="text-blue-500" />}
             onClick={() => openEdit(record)}
           />
           <Popconfirm

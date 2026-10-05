@@ -52,7 +52,7 @@ export default function ProductionProblemAdminPage() {
   useEffect(() => {
     const fetchManpower = async () => {
       try {
-        const res = await fetch("http://localhost:5055/manpower", {
+        const res = await fetch("http://10.10.10.5:5055/manpower", {
           credentials: "include",
         });
         if (!res.ok) throw new Error("Gagal mengambil data manpower");
@@ -73,7 +73,7 @@ export default function ProductionProblemAdminPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5055/production-problem");
+      const res = await fetch("http://10.10.10.5:5055/production-problem");
       if (!res.ok) throw new Error("Failed to fetch data");
       const json = await res.json();
       setData(json);
@@ -96,9 +96,9 @@ export default function ProductionProblemAdminPage() {
     { title: "Problem Item", dataIndex: "problemItem", key: "problemItem" },
     { title: "PIC", dataIndex: "pic", key: "pic", render: (text: string) => getManpowerName(text) },
     { title: "SL/DL", dataIndex: "slOrDl", key: "slOrDl" },
-    { 
-      title: "Status", 
-      dataIndex: "status", 
+    {
+      title: "Status",
+      dataIndex: "status",
       key: "status",
       render: (status: string) => {
         let color = "default";

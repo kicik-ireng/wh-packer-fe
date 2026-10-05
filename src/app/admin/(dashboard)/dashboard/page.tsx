@@ -58,13 +58,13 @@ export default function AdminDashboardPage() {
           stock2RRes,
           stock4RRes,
         ] = await Promise.all([
-          fetch("http://localhost:5055/manpower", { credentials: "include" }),
-          fetch("http://localhost:5055/packing-report", { credentials: "include" }),
-          fetch("http://localhost:5055/production-problem", { credentials: "include" }),
-          fetch("http://localhost:5055/incoming2r", { credentials: "include" }),
-          fetch("http://localhost:5055/incoming4r", { credentials: "include" }),
-          fetch("http://localhost:5055/stock/2r", { credentials: "include" }),
-          fetch("http://localhost:5055/stock/4r", { credentials: "include" }),
+          fetch("http://10.10.10.5:5055/manpower", { credentials: "include" }),
+          fetch("http://10.10.10.5:5055/packing-report", { credentials: "include" }),
+          fetch("http://10.10.10.5:5055/production-problem", { credentials: "include" }),
+          fetch("http://10.10.10.5:5055/incoming2r", { credentials: "include" }),
+          fetch("http://10.10.10.5:5055/incoming4r", { credentials: "include" }),
+          fetch("http://10.10.10.5:5055/stock/2r", { credentials: "include" }),
+          fetch("http://10.10.10.5:5055/stock/4r", { credentials: "include" }),
         ]);
 
         const manpowerData = await manpowerRes.json();
@@ -325,7 +325,7 @@ export default function AdminDashboardPage() {
             </div>
           </Card>
         </Col>
-        
+
         <Col xs={24} md={12} lg={6}>
           <Card title="Proporsi Incoming (2R vs 4R)" bordered={false} className="shadow-sm h-full">
             <div className="h-[300px] flex items-center justify-center">

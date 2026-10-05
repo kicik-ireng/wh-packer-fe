@@ -159,8 +159,8 @@ export default function IndustrialDashboard() {
     try {
       setLoading(true);
       const [res2r, res4r] = await Promise.all([
-        axios.get<IncomingItem[]>("http://localhost:5055/incoming2r"),
-        axios.get<IncomingItem[]>("http://localhost:5055/incoming4r"),
+        axios.get<IncomingItem[]>("http://10.10.10.5:5055/incoming2r"),
+        axios.get<IncomingItem[]>("http://10.10.10.5:5055/incoming4r"),
       ]);
       setIncoming2r(processItems(res2r.data));
       setIncoming4r(processItems(res4r.data));

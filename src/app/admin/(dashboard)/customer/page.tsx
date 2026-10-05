@@ -28,7 +28,7 @@ export default function CustomerPage() {
   const fetchCustomers = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5055/customer", {
+      const res = await fetch("http://10.10.10.5:5055/customer", {
         credentials: "include",
       });
       const json = await res.json();
@@ -42,8 +42,8 @@ export default function CustomerPage() {
   const handleSave = async (values: any) => {
     const method = formData.id ? "PATCH" : "POST";
     const url = formData.id
-      ? `http://localhost:5055/customer/${formData.id}`
-      : `http://localhost:5055/customer`;
+      ? `http://10.10.10.5:5055/customer/${formData.id}`
+      : `http://10.10.10.5:5055/customer`;
 
     try {
       const res = await fetch(url, {
@@ -67,7 +67,7 @@ export default function CustomerPage() {
 
   const handleDelete = async (id: number) => {
     try {
-      await fetch(`http://localhost:5055/customer/${id}`, {
+      await fetch(`http://10.10.10.5:5055/customer/${id}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -103,9 +103,9 @@ export default function CustomerPage() {
       disableSearch: true,
       render: (_: any, record: Customer) => (
         <Space>
-          <Button 
-            type="text" 
-            icon={<Pencil size={14} className="text-blue-500" />} 
+          <Button
+            type="text"
+            icon={<Pencil size={14} className="text-blue-500" />}
             onClick={() => openEdit(record)}
           />
           <Popconfirm

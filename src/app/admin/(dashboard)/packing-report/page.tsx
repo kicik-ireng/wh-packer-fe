@@ -86,11 +86,11 @@ export default function PackingReportPage() {
   const [data, setData] = useState<PackingEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
-  
+
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedType, setSelectedType] = useState<string>("ALL");
   const [searchPRID, setSearchPRID] = useState("");
-  
+
   const router = useRouter();
   const [editingEntryId, setEditingEntryId] = useState<number | null>(null);
   const [editedEntry, setEditedEntry] = useState<Partial<PackingEntry>>({});
@@ -103,7 +103,7 @@ export default function PackingReportPage() {
   useEffect(() => {
     const verifyLogin = async () => {
       try {
-        const res = await fetch("http://localhost:5055/auth/verify", {
+        const res = await fetch("http://10.10.10.5:5055/auth/verify", {
           method: "POST",
           credentials: "include",
         });
@@ -122,7 +122,7 @@ export default function PackingReportPage() {
   async function fetchData() {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5055/packing-report", {
+      const res = await fetch("http://10.10.10.5:5055/packing-report", {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Gagal mengambil data packing report");
@@ -200,7 +200,7 @@ export default function PackingReportPage() {
     if (!editingEntryId) return;
     try {
       const res = await fetch(
-        `http://localhost:5055/packing-entry/${editingEntryId}`,
+        `http://10.10.10.5:5055/packing-entry/${editingEntryId}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -222,7 +222,7 @@ export default function PackingReportPage() {
   const handleDeleteEntry = async (entryId: number) => {
     try {
       const res = await fetch(
-        `http://localhost:5055/packing-entry/${entryId}`,
+        `http://10.10.10.5:5055/packing-entry/${entryId}`,
         {
           method: "DELETE",
           credentials: "include",
@@ -249,8 +249,8 @@ export default function PackingReportPage() {
     try {
       const endpoint =
         status === "APPROVED"
-          ? `http://localhost:5055/packing-entry/approve-grouped/${entryId}`
-          : `http://localhost:5055/packing-entry/reject-grouped/${entryId}`;
+          ? `http://10.10.10.5:5055/packing-entry/approve-grouped/${entryId}`
+          : `http://10.10.10.5:5055/packing-entry/reject-grouped/${entryId}`;
 
       const res = await fetch(endpoint, {
         method: "PATCH",
@@ -271,10 +271,10 @@ export default function PackingReportPage() {
 
   const handleExportToExcel = async () => {
     const [part2r, part4r] = await Promise.all([
-      fetch("http://localhost:5055/part-database-2r", {
+      fetch("http://10.10.10.5:5055/part-database-2r", {
         credentials: "include",
       }).then((res) => res.json()),
-      fetch("http://localhost:5055/part-database-4r", {
+      fetch("http://10.10.10.5:5055/part-database-4r", {
         credentials: "include",
       }).then((res) => res.json()),
     ]);
@@ -285,21 +285,21 @@ export default function PackingReportPage() {
       exportData = filtered.filter((entry) => {
         // Gunakan dayjs untuk parse tanggal agar tidak kena isu timezone UTC shift (seperti toISOString)
         const entryDate = dayjs(entry.tanggalPacking).format("YYYY-MM-DD");
-        
+
         // Asumsi entry.jamMulai adalah format "HH:mm"
         const entryStartDateTime = dayjs(`${entryDate} ${entry.jamMulai}`, "YYYY-MM-DD HH:mm");
         const entryEndDateTime = dayjs(`${entryDate} ${entry.jamSelesai}`, "YYYY-MM-DD HH:mm");
-        
+
         // Ambil data jika ada singgungan waktu (overlap)
         // Atau jika waktu mulai/selesai berada di dalam rentang
-        const isStartInside = (entryStartDateTime.isAfter(exportStart) || entryStartDateTime.isSame(exportStart)) && 
-                              (entryStartDateTime.isBefore(exportEnd) || entryStartDateTime.isSame(exportEnd));
-        
-        const isEndInside = (entryEndDateTime.isAfter(exportStart) || entryEndDateTime.isSame(exportStart)) && 
-                            (entryEndDateTime.isBefore(exportEnd) || entryEndDateTime.isSame(exportEnd));
-                            
-        const isEnveloping = (entryStartDateTime.isBefore(exportStart) || entryStartDateTime.isSame(exportStart)) && 
-                             (entryEndDateTime.isAfter(exportEnd) || entryEndDateTime.isSame(exportEnd));
+        const isStartInside = (entryStartDateTime.isAfter(exportStart) || entryStartDateTime.isSame(exportStart)) &&
+          (entryStartDateTime.isBefore(exportEnd) || entryStartDateTime.isSame(exportEnd));
+
+        const isEndInside = (entryEndDateTime.isAfter(exportStart) || entryEndDateTime.isSame(exportStart)) &&
+          (entryEndDateTime.isBefore(exportEnd) || entryEndDateTime.isSame(exportEnd));
+
+        const isEnveloping = (entryStartDateTime.isBefore(exportStart) || entryStartDateTime.isSame(exportStart)) &&
+          (entryEndDateTime.isAfter(exportEnd) || entryEndDateTime.isSame(exportEnd));
 
         return isStartInside || isEndInside || isEnveloping;
       });
@@ -478,7 +478,7 @@ export default function PackingReportPage() {
       `PackingReport_${selectedType}_${exportStart ? exportStart.format("YYYYMMDD_HHmm") : "All"}.xlsx`,
       { bookType: "xlsx", cellStyles: true },
     );
-    
+
     setShowExportModal(false);
   };
 
@@ -506,8 +506,8 @@ export default function PackingReportPage() {
     { title: "Jam Mulai", dataIndex: "jamMulai", key: "jamMulai" },
     { title: "Jam Selesai", dataIndex: "jamSelesai", key: "jamSelesai" },
     { title: "Menit", dataIndex: "menitPacking", key: "menitPacking" },
-    { 
-      title: "Packing Req No (PRID)", 
+    {
+      title: "Packing Req No (PRID)",
       key: "prid",
       render: (_: any, record: PackingEntry) => (
         <span className="font-medium text-blue-800">
@@ -517,22 +517,22 @@ export default function PackingReportPage() {
     },
     { title: "Explanner No", dataIndex: "explannerNo", key: "explannerNo" },
     { title: "Customer Part No", dataIndex: "customerPartNo", key: "customerPartNo" },
-    { 
-      title: "Qty Plan", 
-      dataIndex: "qtyPlan", 
+    {
+      title: "Qty Plan",
+      dataIndex: "qtyPlan",
       key: "qtyPlan",
       render: (q: number) => <span className="font-medium text-green-700">{q}</span>
     },
-    { 
-      title: "Qty Actual", 
+    {
+      title: "Qty Actual",
       key: "qtyActual",
       render: (_: any, record: PackingEntry) => {
         if (editingEntryId === record.id) {
           return (
-            <Input 
+            <Input
               type="number"
               value={editedEntry.qtyActualPacking || 0}
-              onChange={(e) => setEditedEntry({...editedEntry, qtyActualPacking: Number(e.target.value)})}
+              onChange={(e) => setEditedEntry({ ...editedEntry, qtyActualPacking: Number(e.target.value) })}
               className="w-20"
             />
           );
@@ -543,17 +543,17 @@ export default function PackingReportPage() {
     { title: "PIC1", key: "pic1", render: (_: any, record: PackingEntry) => record.pic1?.name || "-" },
     { title: "PIC2", key: "pic2", render: (_: any, record: PackingEntry) => record.pic2?.name || "-" },
     { title: "PIC3", key: "pic3", render: (_: any, record: PackingEntry) => record.pic3?.name || "-" },
-    { 
-      title: "Balance", 
+    {
+      title: "Balance",
       key: "balance",
       render: (_: any, record: PackingEntry) => (
         <span className="font-medium text-red-500">{record.qtyPlan - record.qtyActualPacking}</span>
       )
     },
     { title: "Type", dataIndex: "type", key: "type" },
-    { 
-      title: "Status", 
-      dataIndex: "status", 
+    {
+      title: "Status",
+      dataIndex: "status",
       key: "status",
       render: (status: string) => {
         if (status === "APPROVED") return <Tag color="success">Approved</Tag>;
@@ -596,22 +596,22 @@ export default function PackingReportPage() {
         icon={<FiPackage size={24} className="text-blue-600" />}
         filterControls={
           <Space wrap>
-            <DatePicker 
-              placeholder="Filter Tanggal" 
-              onChange={(date, dateString) => setSelectedDate(Array.isArray(dateString) ? dateString[0] : dateString)} 
-              allowClear 
+            <DatePicker
+              placeholder="Filter Tanggal"
+              onChange={(date, dateString) => setSelectedDate(Array.isArray(dateString) ? dateString[0] : dateString)}
+              allowClear
             />
             <Select value={selectedType} onChange={setSelectedType} style={{ width: 120 }}>
               <Select.Option value="ALL">ALL</Select.Option>
               <Select.Option value="2R">2R</Select.Option>
               <Select.Option value="4R">4R</Select.Option>
             </Select>
-            <Input 
-              placeholder="Cari PRID..." 
-              prefix={<FiSearch />} 
-              value={searchPRID} 
-              onChange={(e) => setSearchPRID(e.target.value)} 
-              allowClear 
+            <Input
+              placeholder="Cari PRID..."
+              prefix={<FiSearch />}
+              value={searchPRID}
+              onChange={(e) => setSearchPRID(e.target.value)}
+              allowClear
             />
           </Space>
         }
@@ -643,9 +643,9 @@ export default function PackingReportPage() {
             <label className="text-sm font-semibold text-gray-700 mb-1 flex items-center gap-1">
               Rentang Tanggal & Jam:
             </label>
-            <DatePicker.RangePicker 
-              showTime 
-              format="YYYY-MM-DD HH:mm" 
+            <DatePicker.RangePicker
+              showTime
+              format="YYYY-MM-DD HH:mm"
               className="w-full"
               onChange={(dates) => {
                 setExportStart(dates?.[0] || null);

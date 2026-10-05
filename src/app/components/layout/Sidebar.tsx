@@ -65,7 +65,7 @@ const Sidebar = () => {
 
   const handleLogout = async () => {
     try {
-      await fetch("http://localhost:5055/auth/logout", {
+      await fetch("http://10.10.10.5:5055/auth/logout", {
         method: "POST",
         credentials: "include", // penting agar cookie ikut terkirim
       });

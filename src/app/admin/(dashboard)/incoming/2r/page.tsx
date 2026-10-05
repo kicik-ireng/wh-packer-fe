@@ -18,7 +18,7 @@ export default function Incoming2RPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5055/incoming2r", {
+      const res = await fetch("http://10.10.10.5:5055/incoming2r", {
         credentials: "include",
       });
       const json = await res.json();
@@ -31,7 +31,7 @@ export default function Incoming2RPage() {
   };
 
   useEffect(() => {
-    fetch("http://localhost:5055/auth/verify", {
+    fetch("http://10.10.10.5:5055/auth/verify", {
       method: "POST",
       credentials: "include",
     }).then((res) => {
@@ -59,7 +59,7 @@ export default function Incoming2RPage() {
 
     setUpdating(true);
     try {
-      const res = await fetch(`http://localhost:5055/incoming2r/${id}`, {
+      const res = await fetch(`http://10.10.10.5:5055/incoming2r/${id}`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -82,7 +82,7 @@ export default function Incoming2RPage() {
     if (!confirm("Yakin hapus data ini?")) return;
 
     try {
-      const res = await fetch(`http://localhost:5055/incoming2r/${id}`, {
+      const res = await fetch(`http://10.10.10.5:5055/incoming2r/${id}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -103,7 +103,7 @@ export default function Incoming2RPage() {
     formData.append("file", file);
 
     try {
-      const res = await fetch("http://localhost:5055/incoming2r/upload", {
+      const res = await fetch("http://10.10.10.5:5055/incoming2r/upload", {
         method: "POST",
         body: formData,
         credentials: "include",
@@ -120,7 +120,7 @@ export default function Incoming2RPage() {
   };
 
   const downloadTemplate = () => {
-    window.location.href = "http://localhost:5055/incoming2r/template";
+    window.location.href = "http://10.10.10.5:5055/incoming2r/template";
   };
 
   return (

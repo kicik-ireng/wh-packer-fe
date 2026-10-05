@@ -34,7 +34,7 @@ export default function ScheduleTruckPage() {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [form] = Form.useForm();
-  
+
   const [trucks, setTrucks] = useState<Truck[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -48,7 +48,7 @@ export default function ScheduleTruckPage() {
 
   const verifyLogin = async () => {
     try {
-      const res = await fetch("http://localhost:5055/auth/verify", {
+      const res = await fetch("http://10.10.10.5:5055/auth/verify", {
         method: "POST",
         credentials: "include",
       });
@@ -63,10 +63,10 @@ export default function ScheduleTruckPage() {
     try {
       const [schedulesRes, trucksRes, driversRes, customersRes] =
         await Promise.all([
-          fetch("http://localhost:5055/schedule-truck", { credentials: "include" }),
-          fetch("http://localhost:5055/truck", { credentials: "include" }),
-          fetch("http://localhost:5055/driver", { credentials: "include" }),
-          fetch("http://localhost:5055/customer", { credentials: "include" }),
+          fetch("http://10.10.10.5:5055/schedule-truck", { credentials: "include" }),
+          fetch("http://10.10.10.5:5055/truck", { credentials: "include" }),
+          fetch("http://10.10.10.5:5055/driver", { credentials: "include" }),
+          fetch("http://10.10.10.5:5055/customer", { credentials: "include" }),
         ]);
 
       setData(await schedulesRes.json());
@@ -83,8 +83,8 @@ export default function ScheduleTruckPage() {
     const id = form.getFieldValue("id");
     const method = id ? "PUT" : "POST";
     const url = id
-      ? `http://localhost:5055/schedule-truck/${id}`
-      : `http://localhost:5055/schedule-truck`;
+      ? `http://10.10.10.5:5055/schedule-truck/${id}`
+      : `http://10.10.10.5:5055/schedule-truck`;
 
     const payload = {
       truckId: values.truckId,
@@ -116,7 +116,7 @@ export default function ScheduleTruckPage() {
 
   const handleDelete = async (id: number) => {
     try {
-      await fetch(`http://localhost:5055/schedule-truck/${id}`, {
+      await fetch(`http://10.10.10.5:5055/schedule-truck/${id}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -142,15 +142,15 @@ export default function ScheduleTruckPage() {
   const columns: any = [
     { title: "Truck", dataIndex: ["truck", "noPol"], key: "truck" },
     { title: "Driver", dataIndex: ["driver", "name"], key: "driver" },
-    { 
-      title: "Customers", 
+    {
+      title: "Customers",
       key: "customers",
       render: (_: any, record: ScheduleTruck) => record.customers.map((c) => c.customer.name).join(", "),
     },
     { title: "Cycle", dataIndex: "cycle", key: "cycle", render: (t: any) => t ?? "-" },
-    { 
-      title: "Schedule At", 
-      dataIndex: "scheduleAt", 
+    {
+      title: "Schedule At",
+      dataIndex: "scheduleAt",
       key: "scheduleAt",
       render: (t: string) => new Date(t).toLocaleDateString()
     },
@@ -161,9 +161,9 @@ export default function ScheduleTruckPage() {
       disableSearch: true,
       render: (_: any, record: ScheduleTruck) => (
         <Space>
-          <Button 
-            type="text" 
-            icon={<Pencil size={14} className="text-blue-500" />} 
+          <Button
+            type="text"
+            icon={<Pencil size={14} className="text-blue-500" />}
             onClick={() => openEdit(record)}
           />
           <Popconfirm
@@ -211,7 +211,7 @@ export default function ScheduleTruckPage() {
       >
         <Form form={form} layout="vertical" onFinish={handleSave}>
           <Form.Item name="id" hidden><Input /></Form.Item>
-          
+
           <Form.Item name="truckId" label="Truck" rules={[{ required: true, message: "Pilih Truck" }]}>
             <Select placeholder="Pilih Truck">
               {trucks.map((t) => (
@@ -219,7 +219,7 @@ export default function ScheduleTruckPage() {
               ))}
             </Select>
           </Form.Item>
-          
+
           <Form.Item name="driverId" label="Driver" rules={[{ required: true, message: "Pilih Driver" }]}>
             <Select placeholder="Pilih Driver">
               {drivers.map((d) => (
@@ -227,7 +227,7 @@ export default function ScheduleTruckPage() {
               ))}
             </Select>
           </Form.Item>
-          
+
           <Form.Item name="customerIds" label="Customers" rules={[{ required: true, message: "Pilih minimal 1 customer" }]}>
             <Select mode="multiple" placeholder="Pilih Customers">
               {customers.map((c) => (
@@ -239,7 +239,7 @@ export default function ScheduleTruckPage() {
           <Form.Item name="scheduleAt" label="Tanggal Schedule" rules={[{ required: true, message: "Pilih Tanggal" }]}>
             <DatePicker className="w-full" format="YYYY-MM-DD" />
           </Form.Item>
-          
+
           <Form.Item name="cycle" label="Cycle" rules={[{ required: true }]}>
             <Input type="number" min={1} />
           </Form.Item>

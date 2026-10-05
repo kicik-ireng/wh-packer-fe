@@ -112,7 +112,7 @@ export default function DeliveryOrderForm() {
     const fetchDeliveryHistory = async () => {
       setLoadingHistory(true);
       try {
-        const res = await fetch("http://localhost:5055/delivery-order");
+        const res = await fetch("http://10.10.10.5:5055/delivery-order");
         const data = await res.json();
 
         const sortedData = data.sort(
@@ -132,7 +132,7 @@ export default function DeliveryOrderForm() {
   }, []);
 
   useEffect(() => {
-    fetch("http://localhost:5055/driver")
+    fetch("http://10.10.10.5:5055/driver")
       .then((res) => res.json())
       .then(setDrivers)
       .catch(() => message.error("Failed to load driver data."));
@@ -140,7 +140,7 @@ export default function DeliveryOrderForm() {
 
   useEffect(() => {
     // fetch customers and keep original copy
-    fetch("http://localhost:5055/customer")
+    fetch("http://10.10.10.5:5055/customer")
       .then((res) => res.json())
       .then((data: Customer[]) => {
         setCustomers(data);
@@ -151,7 +151,7 @@ export default function DeliveryOrderForm() {
 
   useEffect(() => {
     // fetch schedules
-    fetch("http://localhost:5055/schedule-truck")
+    fetch("http://10.10.10.5:5055/schedule-truck")
       .then((res) => res.json())
       .then((data: ScheduleTruck[]) => {
         // sort desc id like before
@@ -165,7 +165,7 @@ export default function DeliveryOrderForm() {
       setLoading(true);
       try {
         const response = await fetch(
-          `http://localhost:5055/stock/${partType}`,
+          `http://10.10.10.5:5055/stock/${partType}`,
         );
         const data = await response.json();
         setStockItems(data);
@@ -282,7 +282,7 @@ export default function DeliveryOrderForm() {
 
       message.loading({ content: "Saving delivery order...", key: "save" });
 
-      const response = await fetch("http://localhost:5055/delivery-order", {
+      const response = await fetch("http://10.10.10.5:5055/delivery-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -298,7 +298,7 @@ export default function DeliveryOrderForm() {
         // restore customers list after creating
         setCustomers(originalCustomers);
         // optionally refresh history
-        const hist = await fetch("http://localhost:5055/delivery-order").then(
+        const hist = await fetch("http://10.10.10.5:5055/delivery-order").then(
           (r) => r.json(),
         );
         setDeliveryHistory(

@@ -33,7 +33,7 @@ export default function Stock4RPage() {
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingItem, setEditingItem] = useState<Stock4R | null>(null);
   const [form] = Form.useForm();
-  
+
   // Modal Import Excel
   const [showImportModal, setShowImportModal] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -42,7 +42,7 @@ export default function Stock4RPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5055/stock/4r", {
+      const res = await fetch("http://10.10.10.5:5055/stock/4r", {
         credentials: "include",
         cache: "no-cache",
       });
@@ -56,7 +56,7 @@ export default function Stock4RPage() {
   };
 
   useEffect(() => {
-    fetch("http://localhost:5055/auth/verify", {
+    fetch("http://10.10.10.5:5055/auth/verify", {
       method: "POST",
       credentials: "include",
     }).then((res) => {
@@ -66,7 +66,7 @@ export default function Stock4RPage() {
   }, []);
 
   const handleDownloadTemplate = () => {
-    window.open("http://localhost:5055/stock/export/4r", "_blank");
+    window.open("http://10.10.10.5:5055/stock/export/4r", "_blank");
   };
 
   const handleUploadStock = async () => {
@@ -79,7 +79,7 @@ export default function Stock4RPage() {
     formData.append("file", file);
 
     try {
-      const res = await fetch("http://localhost:5055/stock/upload/4r", {
+      const res = await fetch("http://10.10.10.5:5055/stock/upload/4r", {
         method: "POST",
         body: formData,
         credentials: "include",
@@ -103,7 +103,7 @@ export default function Stock4RPage() {
     try {
       // Update Stock Qty
       if (values.totalStock !== editingItem.totalStock) {
-        const resQty = await fetch("http://localhost:5055/stock/update-part-4r", {
+        const resQty = await fetch("http://10.10.10.5:5055/stock/update-part-4r", {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
@@ -117,7 +117,7 @@ export default function Stock4RPage() {
 
       // Update Rack
       if (values.rack !== editingItem.rack) {
-        const resRack = await fetch(`http://localhost:5055/stock/4r/rack/${editingItem.id}`, {
+        const resRack = await fetch(`http://10.10.10.5:5055/stock/4r/rack/${editingItem.id}`, {
           method: "PATCH",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
@@ -152,9 +152,9 @@ export default function Stock4RPage() {
     { title: "KPP NP", dataIndex: ["part4r", "kppNp"], key: "kppNp" },
     { title: "Customer", dataIndex: ["part4r", "customer"], key: "customer" },
     { title: "Segment", dataIndex: ["part4r", "segment"], key: "segment" },
-    { 
-      title: "Qty", 
-      dataIndex: "totalStock", 
+    {
+      title: "Qty",
+      dataIndex: "totalStock",
       key: "totalStock",
       render: (val: number) => <span className="font-semibold text-blue-600">{val}</span>
     },
@@ -165,10 +165,10 @@ export default function Stock4RPage() {
       width: 100,
       disableSearch: true,
       render: (_: any, record: Stock4R) => (
-        <Button 
-          type="primary" 
-          size="small" 
-          icon={<Pencil size={14} />} 
+        <Button
+          type="primary"
+          size="small"
+          icon={<Pencil size={14} />}
           onClick={() => openEdit(record)}
         >
           Edit
@@ -184,15 +184,15 @@ export default function Stock4RPage() {
         icon={<PackageCheck size={24} className="text-blue-600" />}
         extraActions={
           <Space>
-            <Button 
-              icon={<Download size={16} />} 
+            <Button
+              icon={<Download size={16} />}
               onClick={handleDownloadTemplate}
             >
               Download Template
             </Button>
-            <Button 
-              type="primary" 
-              icon={<Upload size={16} />} 
+            <Button
+              type="primary"
+              icon={<Upload size={16} />}
               onClick={() => setShowImportModal(true)}
             >
               Import Stock
@@ -221,7 +221,7 @@ export default function Stock4RPage() {
               <strong>Model:</strong> {editingItem?.part4r?.model}
             </p>
           </div>
-          
+
           <Form.Item
             name="totalStock"
             label="Total Stock (Qty)"
@@ -229,7 +229,7 @@ export default function Stock4RPage() {
           >
             <InputNumber className="w-full" min={0} />
           </Form.Item>
-          
+
           <Form.Item
             name="rack"
             label="Rack Location"
@@ -257,8 +257,8 @@ export default function Stock4RPage() {
         cancelText="Batal"
       >
         <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg text-center bg-gray-50">
-          <input 
-            type="file" 
+          <input
+            type="file"
             accept=".xlsx, .xls"
             onChange={(e) => setFile(e.target.files?.[0] || null)}
             className="w-full"

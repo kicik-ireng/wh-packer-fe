@@ -78,8 +78,8 @@ export default function DandoriPage() {
   useEffect(() => {
     const url =
       type === "2r"
-        ? "http://localhost:5055/incoming2r"
-        : "http://localhost:5055/incoming4r";
+        ? "http://10.10.10.5:5055/incoming2r"
+        : "http://10.10.10.5:5055/incoming4r";
 
     fetch(url)
       .then((res) => res.json())
@@ -110,8 +110,8 @@ export default function DandoriPage() {
   useEffect(() => {
     const url =
       type === "2r"
-        ? "http://localhost:5055/part-database-2r"
-        : "http://localhost:5055/part-database-4r";
+        ? "http://10.10.10.5:5055/part-database-2r"
+        : "http://10.10.10.5:5055/part-database-4r";
 
     fetch(url)
       .then((res) => res.json())
@@ -163,8 +163,8 @@ export default function DandoriPage() {
   //   };
 
   //   const url = type === '2r'
-  //     ? 'http://localhost:5055/incoming2r/manual'
-  //     : 'http://localhost:5055/incoming4r/manual';
+  //     ? 'http://10.10.10.5:5055/incoming2r/manual'
+  //     : 'http://10.10.10.5:5055/incoming4r/manual';
 
   //   await toast.promise(
   //     fetch(url, {
@@ -258,8 +258,8 @@ export default function DandoriPage() {
 
     const url =
       type === "2r"
-        ? "http://localhost:5055/incoming2r/manual"
-        : "http://localhost:5055/incoming4r/manual";
+        ? "http://10.10.10.5:5055/incoming2r/manual"
+        : "http://10.10.10.5:5055/incoming4r/manual";
 
     await toast.promise(
       fetch(url, {
@@ -603,8 +603,8 @@ export default function DandoriPage() {
                     key={p.id}
                     onClick={() => setSelectedPart(p)}
                     className={`p-3 rounded-none border text-sm cursor-pointer transition-all duration-200 shadow-sm ${selectedPart?.id === p.id
-                        ? "bg-white border-blue-500 text-blue-800 font-semibold"
-                        : "text-black hover:bg-slate-100"
+                      ? "bg-white border-blue-500 text-blue-800 font-semibold"
+                      : "text-black hover:bg-slate-100"
                       }`}
                   >
                     {p.model} – {p.assyNo16} – {p.customer}

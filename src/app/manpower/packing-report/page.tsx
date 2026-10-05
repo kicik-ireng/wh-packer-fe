@@ -88,7 +88,7 @@ export default function PackingReportPage() {
 
   const fetchReportsData = useCallback(async () => {
     try {
-      const res = await fetch("http://localhost:5055/packing-report", {
+      const res = await fetch("http://10.10.10.5:5055/packing-report", {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Gagal fetch data");
@@ -134,7 +134,7 @@ export default function PackingReportPage() {
     const fetchManpower = async () => {
       setLoadingManpower(true);
       try {
-        const res = await fetch("http://localhost:5055/manpower");
+        const res = await fetch("http://10.10.10.5:5055/manpower");
         const data = await res.json();
         setManpowerList(
           data.map((m: any) => ({ value: m.id.toString(), label: m.name })),
@@ -162,8 +162,8 @@ export default function PackingReportPage() {
       try {
         const url =
           form.type === "2R"
-            ? "http://localhost:5055/incoming2r"
-            : "http://localhost:5055/incoming4r";
+            ? "http://10.10.10.5:5055/incoming2r"
+            : "http://10.10.10.5:5055/incoming4r";
         const res = await fetch(url, { signal: controller.signal });
         const data = await res.json();
 
@@ -447,7 +447,7 @@ export default function PackingReportPage() {
         })),
       };
 
-      const res = await fetch("http://localhost:5055/packing-report", {
+      const res = await fetch("http://10.10.10.5:5055/packing-report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -698,8 +698,8 @@ export default function PackingReportPage() {
 
           <div className="w-full space-y-4 pb-4">
             {form.entries.map((entry, i) => (
-              <div 
-                key={entry.no} 
+              <div
+                key={entry.no}
                 className="border border-gray-200 dark:border-gray-700 rounded-none bg-white dark:bg-gray-800/40 p-3 md:p-4 relative shadow-sm transition-all hover:border-blue-300"
               >
                 {/* Header Card */}
@@ -717,7 +717,7 @@ export default function PackingReportPage() {
 
                 {/* Form Grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2 md:gap-3 items-end">
-                  
+
                   {/* Waktu */}
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Mulai</label>
@@ -728,7 +728,7 @@ export default function PackingReportPage() {
                       className="w-full rounded-none px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none"
                     />
                   </div>
-                  
+
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Selesai</label>
                     <input

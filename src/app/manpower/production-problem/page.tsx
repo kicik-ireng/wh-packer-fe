@@ -28,7 +28,7 @@ export default function ProductionProblemPage() {
     async function fetchManpower() {
       setLoadingManpower(true);
       try {
-        const res = await fetch("http://localhost:5055/manpower");
+        const res = await fetch("http://10.10.10.5:5055/manpower");
         const data = await res.json();
         const options = data.map((m: any) => ({
           value: m.id.toString(),
@@ -76,7 +76,7 @@ export default function ProductionProblemPage() {
 
       const menit = Math.floor((selesai.getTime() - mulai.getTime()) / 60000);
       const response = await fetch(
-        "http://localhost:5055/production-problem",
+        "http://10.10.10.5:5055/production-problem",
         {
           method: "POST",
           headers: {

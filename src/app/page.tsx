@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   User,
   ClipboardList,
@@ -10,7 +11,6 @@ import {
   Layers,
   Truck,
 } from "lucide-react";
-import { motion } from "framer-motion";
 
 // MenuCard Component
 const MenuCard = ({
@@ -33,13 +33,8 @@ const MenuCard = ({
   const [open, setOpen] = useState(false);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.6 }}
-      whileHover={{ scale: 1.05, rotate: 1 }}
-      whileTap={{ scale: 0.98 }}
-      className="relative"
+    <div
+      className="relative transition-all duration-300 hover:scale-105 active:scale-95"
     >
       {isDropdown ? (
         <div
@@ -66,7 +61,7 @@ const MenuCard = ({
           <p className="text-sm text-gray-600">{description}</p>
         </Link>
       )}
-    </motion.div>
+    </div>
   );
 };
 
@@ -84,10 +79,13 @@ export default function HomePage() {
 
       {/* Logo */}
       <div className="relative z-10 flex justify-center pt-10">
-        <img
+        <Image
           src="/logo_.png"
           alt="Company Logo"
+          width={160}
+          height={80}
           className="h-20 w-auto drop-shadow-lg"
+          priority
         />
       </div>
 
@@ -147,23 +145,13 @@ export default function HomePage() {
 
       {/* Title & Description */}
       <section className="relative z-10 text-center flex flex-col items-center px-4 md:px-6 py-12 md:py-16 space-y-6 max-w-6xl mx-auto">
-        <motion.h1
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-gray-800 leading-tight drop-shadow-md"
-        >
+        <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-gray-800 leading-tight drop-shadow-md animate-fade-in">
           EXEDY Production Dashboard
-        </motion.h1>
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1 }}
-          className="mt-2 text-base sm:text-lg md:text-xl text-gray-600 max-w-2xl leading-relaxed"
-        >
+        </h1>
+        <p className="mt-2 text-base sm:text-lg md:text-xl text-gray-600 max-w-2xl leading-relaxed animate-fade-in-delayed">
           Real-time monitoring and control system to enhance production
           efficiency and performance.
-        </motion.p>
+        </p>
       </section>
 
       {/* Menu Cards */}

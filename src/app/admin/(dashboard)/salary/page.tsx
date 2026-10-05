@@ -43,7 +43,7 @@ export default function MonthlyRekapPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      let url = `http://localhost:5055/monthly-rekap`;
+      let url = `http://10.10.10.5:5055/monthly-rekap`;
 
       if (dateRange) {
         const from = dateRange[0].format("YYYY-MM-DD");

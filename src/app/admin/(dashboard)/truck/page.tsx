@@ -28,7 +28,7 @@ export default function TruckPage() {
   const fetchTrucks = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5055/truck", {
+      const res = await fetch("http://10.10.10.5:5055/truck", {
         credentials: "include",
       });
       const json = await res.json();
@@ -42,8 +42,8 @@ export default function TruckPage() {
   const handleSave = async (values: any) => {
     const method = formData.id ? "PUT" : "POST";
     const url = formData.id
-      ? `http://localhost:5055/truck/${formData.id}`
-      : `http://localhost:5055/truck`;
+      ? `http://10.10.10.5:5055/truck/${formData.id}`
+      : `http://10.10.10.5:5055/truck`;
 
     try {
       const res = await fetch(url, {
@@ -67,7 +67,7 @@ export default function TruckPage() {
 
   const handleDelete = async (id: number) => {
     try {
-      await fetch(`http://localhost:5055/truck/${id}`, {
+      await fetch(`http://10.10.10.5:5055/truck/${id}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -102,9 +102,9 @@ export default function TruckPage() {
       disableSearch: true,
       render: (_: any, record: Truck) => (
         <Space>
-          <Button 
-            type="text" 
-            icon={<Pencil size={14} className="text-blue-500" />} 
+          <Button
+            type="text"
+            icon={<Pencil size={14} className="text-blue-500" />}
             onClick={() => openEdit(record)}
           />
           <Popconfirm

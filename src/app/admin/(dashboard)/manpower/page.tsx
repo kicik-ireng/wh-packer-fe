@@ -32,7 +32,7 @@ export default function ManpowerPage() {
   const fetchManpower = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5055/manpower", {
+      const res = await fetch("http://10.10.10.5:5055/manpower", {
         credentials: "include",
       });
       const json = await res.json();
@@ -46,8 +46,8 @@ export default function ManpowerPage() {
   const handleSave = async (values: any) => {
     const method = formData.id ? "PATCH" : "POST";
     const url = formData.id
-      ? `http://localhost:5055/manpower/${formData.id}`
-      : `http://localhost:5055/manpower`;
+      ? `http://10.10.10.5:5055/manpower/${formData.id}`
+      : `http://10.10.10.5:5055/manpower`;
 
     try {
       const res = await fetch(url, {
@@ -71,7 +71,7 @@ export default function ManpowerPage() {
 
   const handleDelete = async (id: number) => {
     try {
-      await fetch(`http://localhost:5055/manpower/${id}`, {
+      await fetch(`http://10.10.10.5:5055/manpower/${id}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -106,9 +106,9 @@ export default function ManpowerPage() {
       disableSearch: true,
       render: (_: any, record: Manpower) => (
         <Space>
-          <Button 
-            type="text" 
-            icon={<Pencil size={14} className="text-blue-500" />} 
+          <Button
+            type="text"
+            icon={<Pencil size={14} className="text-blue-500" />}
             onClick={() => openEdit(record)}
           />
           <Popconfirm
@@ -244,18 +244,18 @@ export default function ManpowerPage() {
         <div className="max-h-[60vh] overflow-y-auto bg-gray-100 p-4 rounded-lg">
           <div id="print-area" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 54mm)', gap: '10mm', justifyContent: 'center' }}>
             {printData.map((mp) => (
-              <div 
-                key={mp.id} 
-                style={{ 
-                  width: '54mm', 
-                  height: '86mm', 
-                  border: '1px solid #d9d9d9', 
-                  borderRadius: '12px', 
-                  padding: '16px', 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
+              <div
+                key={mp.id}
+                style={{
+                  width: '54mm',
+                  height: '86mm',
+                  border: '1px solid #d9d9d9',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   backgroundColor: '#ffffff',
                   boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
                   breakInside: 'avoid'
@@ -265,7 +265,7 @@ export default function ManpowerPage() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', padding: '8px', borderRadius: '8px', marginBottom: '16px' }}>
                   <QRCode value={mp.nik} size={130} bordered={false} errorLevel="H" />
                 </div>
-                
+
                 {/* User Details */}
                 <div style={{ textAlign: 'center', width: '100%' }}>
                   <div style={{ fontWeight: 800, fontSize: '16px', textTransform: 'uppercase', color: '#1f2937', lineHeight: '1.2', marginBottom: '8px' }}>

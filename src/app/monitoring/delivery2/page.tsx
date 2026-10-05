@@ -95,8 +95,8 @@ export default function DeliveryDashboard() {
     const fetchAll = async () => {
       try {
         const [resDO, resSchedule] = await Promise.all([
-          fetch("http://localhost:5055/delivery-order"),
-          fetch("http://localhost:5055/schedule-truck"),
+          fetch("http://10.10.10.5:5055/delivery-order"),
+          fetch("http://10.10.10.5:5055/schedule-truck"),
         ]);
 
         if (!resDO.ok) throw new Error("Failed fetching delivery-order");

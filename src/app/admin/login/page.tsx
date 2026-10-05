@@ -11,11 +11,13 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
+  const [errorMsg, setErrorMsg] = useState("");
+
   // 🔒
   useEffect(() => {
     const checkToken = async () => {
       try {
-        const res = await fetch("http://localhost:5055/auth/verify", {
+        const res = await fetch("http://10.10.10.5:5055/auth/verify", {
           method: "POST",
           credentials: "include",
         });
@@ -35,8 +37,9 @@ export default function AdminLoginPage() {
 
   const handleLogin = async () => {
     setLoading(true);
+    setErrorMsg("");
     try {
-      const res = await fetch("http://localhost:5055/auth/login", {
+      const res = await fetch("http://10.10.10.5:5055/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
@@ -47,10 +50,10 @@ export default function AdminLoginPage() {
         router.push("/admin/dashboard");
       } else {
         const data = await res.json();
-        alert(data.message || "Login gagal.");
+        setErrorMsg(data.message || "Login gagal.");
       }
     } catch (error) {
-      alert("Terjadi kesalahan saat login.");
+      setErrorMsg("Terjadi kesalahan saat login.");
       console.error(error);
     } finally {
       setLoading(false);
@@ -59,8 +62,9 @@ export default function AdminLoginPage() {
 
   if (checkingAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-gray-600">
-        Memuat...
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-r from-blue-200 to-blue-50 text-gray-600">
+        <div className="w-12 h-12 border-4 border-blue-400 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+        <p className="font-medium animate-pulse">Memuat...</p>
       </div>
     );
   }
@@ -91,6 +95,12 @@ export default function AdminLoginPage() {
           className="rounded-2xl p-10 max-w-md w-full bg-white text-gray-900 border border-gray-300 shadow-xl flex flex-col gap-6 transition-all duration-300"
         >
           <h2 className="text-3xl font-bold text-center">🔐 Admin Login</h2>
+
+          {errorMsg && (
+            <div className="p-3 bg-red-100 border border-red-300 text-red-700 rounded-md text-sm text-center">
+              {errorMsg}
+            </div>
+          )}
 
           <label className="block">
             <span className="font-semibold mb-1 block">Username</span>

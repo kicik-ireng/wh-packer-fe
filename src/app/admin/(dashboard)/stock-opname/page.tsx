@@ -25,14 +25,14 @@ export default function StockOpnamePage() {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [form] = Form.useForm();
-  
+
   const [stock2R, setStock2R] = useState<any[]>([]);
   const [stock4R, setStock4R] = useState<any[]>([]);
-  
+
   const [selectedType, setSelectedType] = useState<"2R" | "4R" | null>(null);
   const [isAllPart, setIsAllPart] = useState(false);
   const [selectedPartIds, setSelectedPartIds] = useState<number[]>([]);
-  
+
   const [workspaceData, setWorkspaceData] = useState<any[]>([]);
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export default function StockOpnamePage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5055/stock-opname", { credentials: "include" });
+      const res = await fetch("http://10.10.10.5:5055/stock-opname", { credentials: "include" });
       const json = await res.json();
       setData(json);
     } catch (err) {
@@ -55,8 +55,8 @@ export default function StockOpnamePage() {
   const fetchStocks = async () => {
     try {
       const [res2r, res4r] = await Promise.all([
-        fetch("http://localhost:5055/stock/2r", { credentials: "include" }),
-        fetch("http://localhost:5055/stock/4r", { credentials: "include" }),
+        fetch("http://10.10.10.5:5055/stock/2r", { credentials: "include" }),
+        fetch("http://10.10.10.5:5055/stock/4r", { credentials: "include" }),
       ]);
       setStock2R(await res2r.json());
       setStock4R(await res4r.json());
@@ -73,7 +73,7 @@ export default function StockOpnamePage() {
     }
 
     const currentStockList = selectedType === "2R" ? stock2R : stock4R;
-    
+
     let filteredStocks = [];
     if (isAllPart) {
       filteredStocks = currentStockList;
@@ -118,7 +118,7 @@ export default function StockOpnamePage() {
     }));
 
     try {
-      const res = await fetch(`http://localhost:5055/stock-opname`, {
+      const res = await fetch(`http://10.10.10.5:5055/stock-opname`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -139,7 +139,7 @@ export default function StockOpnamePage() {
 
   const handleDelete = async (id: number) => {
     try {
-      await fetch(`http://localhost:5055/stock-opname/${id}`, {
+      await fetch(`http://10.10.10.5:5055/stock-opname/${id}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -152,7 +152,7 @@ export default function StockOpnamePage() {
 
   const updateStatus = async (id: number, status: string) => {
     try {
-      await fetch(`http://localhost:5055/stock-opname/${id}`, {
+      await fetch(`http://10.10.10.5:5055/stock-opname/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -238,16 +238,16 @@ export default function StockOpnamePage() {
         <Space>
           {record.status === "PENDING" && (
             <>
-              <Button 
-                type="text" 
+              <Button
+                type="text"
                 className="text-green-500 hover:text-green-600 p-0"
-                icon={<CheckCircle size={16} />} 
+                icon={<CheckCircle size={16} />}
                 onClick={() => updateStatus(record.id, "APPROVED")}
               />
-              <Button 
-                type="text" 
+              <Button
+                type="text"
                 className="text-red-500 hover:text-red-600 p-0"
-                icon={<XCircle size={16} />} 
+                icon={<XCircle size={16} />}
                 onClick={() => updateStatus(record.id, "REJECTED")}
               />
             </>
@@ -268,11 +268,11 @@ export default function StockOpnamePage() {
   const workspaceColumns = [
     { title: "Part Number", dataIndex: "partNum", width: "15%" },
     { title: "Part Name / Model", dataIndex: "partName", width: "25%" },
-    { 
-      title: "Qty System", 
-      dataIndex: "qtySystem", 
+    {
+      title: "Qty System",
+      dataIndex: "qtySystem",
       width: "15%",
-      render: (val: number) => <span className="font-semibold">{val}</span> 
+      render: (val: number) => <span className="font-semibold">{val}</span>
     },
     {
       title: "Qty Actual",
@@ -374,9 +374,9 @@ export default function StockOpnamePage() {
 
             <Col span={4}>
               <Form.Item label="All Part">
-                <Switch 
-                  checked={isAllPart} 
-                  onChange={(checked) => setIsAllPart(checked)} 
+                <Switch
+                  checked={isAllPart}
+                  onChange={(checked) => setIsAllPart(checked)}
                   disabled={!selectedType}
                 />
               </Form.Item>
@@ -397,9 +397,9 @@ export default function StockOpnamePage() {
                 <h3 className="font-semibold m-0 text-blue-700">Workspace Input Stock</h3>
                 <p className="text-xs text-gray-500 m-0">Input Qty Actual dan Remark untuk masing-masing Part di bawah ini.</p>
               </div>
-              <Table 
-                dataSource={workspaceData} 
-                columns={workspaceColumns} 
+              <Table
+                dataSource={workspaceData}
+                columns={workspaceColumns}
                 rowKey="partId"
                 pagination={false}
                 size="small"
