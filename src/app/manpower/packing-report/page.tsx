@@ -88,7 +88,7 @@ export default function PackingReportPage() {
 
   const fetchReportsData = useCallback(async () => {
     try {
-      const res = await fetch("http://localhost:3001/packing-report", {
+      const res = await fetch("http://localhost:5055/packing-report", {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Gagal fetch data");
@@ -134,7 +134,7 @@ export default function PackingReportPage() {
     const fetchManpower = async () => {
       setLoadingManpower(true);
       try {
-        const res = await fetch("http://localhost:3001/manpower");
+        const res = await fetch("http://localhost:5055/manpower");
         const data = await res.json();
         setManpowerList(
           data.map((m: any) => ({ value: m.id.toString(), label: m.name })),
@@ -162,8 +162,8 @@ export default function PackingReportPage() {
       try {
         const url =
           form.type === "2R"
-            ? "http://localhost:3001/incoming2r"
-            : "http://localhost:3001/incoming4r";
+            ? "http://localhost:5055/incoming2r"
+            : "http://localhost:5055/incoming4r";
         const res = await fetch(url, { signal: controller.signal });
         const data = await res.json();
 
@@ -447,7 +447,7 @@ export default function PackingReportPage() {
         })),
       };
 
-      const res = await fetch("http://localhost:3001/packing-report", {
+      const res = await fetch("http://localhost:5055/packing-report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

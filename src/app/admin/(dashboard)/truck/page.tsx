@@ -28,7 +28,7 @@ export default function TruckPage() {
   const fetchTrucks = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:3001/truck", {
+      const res = await fetch("http://localhost:5055/truck", {
         credentials: "include",
       });
       const json = await res.json();
@@ -42,8 +42,8 @@ export default function TruckPage() {
   const handleSave = async (values: any) => {
     const method = formData.id ? "PUT" : "POST";
     const url = formData.id
-      ? `http://localhost:3001/truck/${formData.id}`
-      : `http://localhost:3001/truck`;
+      ? `http://localhost:5055/truck/${formData.id}`
+      : `http://localhost:5055/truck`;
 
     try {
       const res = await fetch(url, {
@@ -67,7 +67,7 @@ export default function TruckPage() {
 
   const handleDelete = async (id: number) => {
     try {
-      await fetch(`http://localhost:3001/truck/${id}`, {
+      await fetch(`http://localhost:5055/truck/${id}`, {
         method: "DELETE",
         credentials: "include",
       });

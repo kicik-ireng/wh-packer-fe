@@ -78,8 +78,8 @@ export default function DandoriPage() {
   useEffect(() => {
     const url =
       type === "2r"
-        ? "http://localhost:3001/incoming2r"
-        : "http://localhost:3001/incoming4r";
+        ? "http://localhost:5055/incoming2r"
+        : "http://localhost:5055/incoming4r";
 
     fetch(url)
       .then((res) => res.json())
@@ -110,8 +110,8 @@ export default function DandoriPage() {
   useEffect(() => {
     const url =
       type === "2r"
-        ? "http://localhost:3001/part-database-2r"
-        : "http://localhost:3001/part-database-4r";
+        ? "http://localhost:5055/part-database-2r"
+        : "http://localhost:5055/part-database-4r";
 
     fetch(url)
       .then((res) => res.json())
@@ -163,8 +163,8 @@ export default function DandoriPage() {
   //   };
 
   //   const url = type === '2r'
-  //     ? 'http://localhost:3001/incoming2r/manual'
-  //     : 'http://localhost:3001/incoming4r/manual';
+  //     ? 'http://localhost:5055/incoming2r/manual'
+  //     : 'http://localhost:5055/incoming4r/manual';
 
   //   await toast.promise(
   //     fetch(url, {
@@ -258,8 +258,8 @@ export default function DandoriPage() {
 
     const url =
       type === "2r"
-        ? "http://localhost:3001/incoming2r/manual"
-        : "http://localhost:3001/incoming4r/manual";
+        ? "http://localhost:5055/incoming2r/manual"
+        : "http://localhost:5055/incoming4r/manual";
 
     await toast.promise(
       fetch(url, {

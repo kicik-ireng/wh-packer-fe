@@ -47,7 +47,7 @@ export default function Part4rPage() {
   const fetchParts = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:3001/part-database-4r", {
+      const res = await fetch("http://localhost:5055/part-database-4r", {
         credentials: "include",
       });
       const json = await res.json();
@@ -61,8 +61,8 @@ export default function Part4rPage() {
   const handleSave = async (values: any) => {
     const method = formData.id ? "PATCH" : "POST";
     const url = formData.id
-      ? `http://localhost:3001/part-database-4r/${formData.id}`
-      : `http://localhost:3001/part-database-4r`;
+      ? `http://localhost:5055/part-database-4r/${formData.id}`
+      : `http://localhost:5055/part-database-4r`;
 
     try {
       const res = await fetch(url, {
@@ -86,7 +86,7 @@ export default function Part4rPage() {
 
   const handleDelete = async (id: number) => {
     try {
-      await fetch(`http://localhost:3001/part-database-4r/${id}`, {
+      await fetch(`http://localhost:5055/part-database-4r/${id}`, {
         method: "DELETE",
         credentials: "include",
       });

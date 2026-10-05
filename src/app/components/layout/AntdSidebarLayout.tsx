@@ -38,7 +38,7 @@ export default function AntdSidebarLayout({
 
   const handleLogout = async () => {
     try {
-      await fetch("http://localhost:3001/auth/logout", {
+      await fetch("http://localhost:5055/auth/logout", {
         method: "POST",
         credentials: "include",
       });

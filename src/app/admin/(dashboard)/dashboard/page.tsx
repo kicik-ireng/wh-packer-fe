@@ -50,11 +50,11 @@ export default function AdminDashboardPage() {
           incoming2RRes,
           incoming4RRes,
         ] = await Promise.all([
-          fetch("http://localhost:3001/manpower", { credentials: "include" }),
-          fetch("http://localhost:3001/packing-report", { credentials: "include" }),
-          fetch("http://localhost:3001/production-problem", { credentials: "include" }),
-          fetch("http://localhost:3001/incoming2r", { credentials: "include" }),
-          fetch("http://localhost:3001/incoming4r", { credentials: "include" }),
+          fetch("http://localhost:5055/manpower", { credentials: "include" }),
+          fetch("http://localhost:5055/packing-report", { credentials: "include" }),
+          fetch("http://localhost:5055/production-problem", { credentials: "include" }),
+          fetch("http://localhost:5055/incoming2r", { credentials: "include" }),
+          fetch("http://localhost:5055/incoming4r", { credentials: "include" }),
         ]);
 
         const manpowerData = await manpowerRes.json();

@@ -48,7 +48,7 @@ export default function ScheduleTruckPage() {
 
   const verifyLogin = async () => {
     try {
-      const res = await fetch("http://localhost:3001/auth/verify", {
+      const res = await fetch("http://localhost:5055/auth/verify", {
         method: "POST",
         credentials: "include",
       });
@@ -63,10 +63,10 @@ export default function ScheduleTruckPage() {
     try {
       const [schedulesRes, trucksRes, driversRes, customersRes] =
         await Promise.all([
-          fetch("http://localhost:3001/schedule-truck", { credentials: "include" }),
-          fetch("http://localhost:3001/truck", { credentials: "include" }),
-          fetch("http://localhost:3001/driver", { credentials: "include" }),
-          fetch("http://localhost:3001/customer", { credentials: "include" }),
+          fetch("http://localhost:5055/schedule-truck", { credentials: "include" }),
+          fetch("http://localhost:5055/truck", { credentials: "include" }),
+          fetch("http://localhost:5055/driver", { credentials: "include" }),
+          fetch("http://localhost:5055/customer", { credentials: "include" }),
         ]);
 
       setData(await schedulesRes.json());
@@ -83,8 +83,8 @@ export default function ScheduleTruckPage() {
     const id = form.getFieldValue("id");
     const method = id ? "PUT" : "POST";
     const url = id
-      ? `http://localhost:3001/schedule-truck/${id}`
-      : `http://localhost:3001/schedule-truck`;
+      ? `http://localhost:5055/schedule-truck/${id}`
+      : `http://localhost:5055/schedule-truck`;
 
     const payload = {
       truckId: values.truckId,
@@ -116,7 +116,7 @@ export default function ScheduleTruckPage() {
 
   const handleDelete = async (id: number) => {
     try {
-      await fetch(`http://localhost:3001/schedule-truck/${id}`, {
+      await fetch(`http://localhost:5055/schedule-truck/${id}`, {
         method: "DELETE",
         credentials: "include",
       });

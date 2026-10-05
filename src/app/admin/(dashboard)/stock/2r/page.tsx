@@ -42,7 +42,7 @@ export default function Stock2RPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:3001/stock/2r", {
+      const res = await fetch("http://localhost:5055/stock/2r", {
         credentials: "include",
         cache: "no-cache",
       });
@@ -56,7 +56,7 @@ export default function Stock2RPage() {
   };
 
   useEffect(() => {
-    fetch("http://localhost:3001/auth/verify", {
+    fetch("http://localhost:5055/auth/verify", {
       method: "POST",
       credentials: "include",
     }).then((res) => {
@@ -66,7 +66,7 @@ export default function Stock2RPage() {
   }, []);
 
   const handleDownloadTemplate = () => {
-    window.open("http://localhost:3001/stock/export/2r", "_blank");
+    window.open("http://localhost:5055/stock/export/2r", "_blank");
   };
 
   const handleUploadStock = async () => {
@@ -79,7 +79,7 @@ export default function Stock2RPage() {
     formData.append("file", file);
 
     try {
-      const res = await fetch("http://localhost:3001/stock/upload/2r", {
+      const res = await fetch("http://localhost:5055/stock/upload/2r", {
         method: "POST",
         body: formData,
         credentials: "include",
@@ -103,7 +103,7 @@ export default function Stock2RPage() {
     try {
       // Update Stock Qty
       if (values.totalStock !== editingItem.totalStock) {
-        const resQty = await fetch("http://localhost:3001/stock/update-part-2r", {
+        const resQty = await fetch("http://localhost:5055/stock/update-part-2r", {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
@@ -117,7 +117,7 @@ export default function Stock2RPage() {
 
       // Update Rack
       if (values.rack !== editingItem.rack) {
-        const resRack = await fetch(`http://localhost:3001/stock/2r/rack/${editingItem.id}`, {
+        const resRack = await fetch(`http://localhost:5055/stock/2r/rack/${editingItem.id}`, {
           method: "PATCH",
           credentials: "include",
           headers: { "Content-Type": "application/json" },

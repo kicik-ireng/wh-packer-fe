@@ -103,7 +103,7 @@ export default function PackingReportPage() {
   useEffect(() => {
     const verifyLogin = async () => {
       try {
-        const res = await fetch("http://localhost:3001/auth/verify", {
+        const res = await fetch("http://localhost:5055/auth/verify", {
           method: "POST",
           credentials: "include",
         });
@@ -122,7 +122,7 @@ export default function PackingReportPage() {
   async function fetchData() {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:3001/packing-report", {
+      const res = await fetch("http://localhost:5055/packing-report", {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Gagal mengambil data packing report");
@@ -200,7 +200,7 @@ export default function PackingReportPage() {
     if (!editingEntryId) return;
     try {
       const res = await fetch(
-        `http://localhost:3001/packing-entry/${editingEntryId}`,
+        `http://localhost:5055/packing-entry/${editingEntryId}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -222,7 +222,7 @@ export default function PackingReportPage() {
   const handleDeleteEntry = async (entryId: number) => {
     try {
       const res = await fetch(
-        `http://localhost:3001/packing-entry/${entryId}`,
+        `http://localhost:5055/packing-entry/${entryId}`,
         {
           method: "DELETE",
           credentials: "include",
@@ -249,8 +249,8 @@ export default function PackingReportPage() {
     try {
       const endpoint =
         status === "APPROVED"
-          ? `http://localhost:3001/packing-entry/approve-grouped/${entryId}`
-          : `http://localhost:3001/packing-entry/reject-grouped/${entryId}`;
+          ? `http://localhost:5055/packing-entry/approve-grouped/${entryId}`
+          : `http://localhost:5055/packing-entry/reject-grouped/${entryId}`;
 
       const res = await fetch(endpoint, {
         method: "PATCH",
@@ -271,10 +271,10 @@ export default function PackingReportPage() {
 
   const handleExportToExcel = async () => {
     const [part2r, part4r] = await Promise.all([
-      fetch("http://localhost:3001/part-database-2r", {
+      fetch("http://localhost:5055/part-database-2r", {
         credentials: "include",
       }).then((res) => res.json()),
-      fetch("http://localhost:3001/part-database-4r", {
+      fetch("http://localhost:5055/part-database-4r", {
         credentials: "include",
       }).then((res) => res.json()),
     ]);

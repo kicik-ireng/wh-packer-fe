@@ -51,7 +51,7 @@
 //   useEffect(() => {
 //     const fetchData = async () => {
 //       try {
-//         const res = await fetch('http://localhost:3001/dashboard-delivery');
+//         const res = await fetch('http://localhost:5055/dashboard-delivery');
 //         const data = await res.json();
 
 //         const today = new Date().toISOString().split('T')[0];
@@ -347,7 +347,7 @@
 //   useEffect(() => {
 //     const fetchData = async () => {
 //       try {
-//         const res = await fetch('http://localhost:3001/dashboard-delivery');
+//         const res = await fetch('http://localhost:5055/dashboard-delivery');
 //         const data = await res.json();
 
 //         const today = new Date().toISOString().split('T')[0];
@@ -641,7 +641,7 @@
 //   useEffect(() => {
 //     const fetchData = async () => {
 //       try {
-//         const res = await fetch('http://localhost:3001/dashboard-delivery');
+//         const res = await fetch('http://localhost:5055/dashboard-delivery');
 //         const data = await res.json();
 
 //         const today = new Date().toISOString().split('T')[0];
@@ -944,7 +944,7 @@
 //   useEffect(() => {
 //     const fetchData = async () => {
 //       try {
-//         const res = await fetch('http://localhost:3001/dashboard-delivery');
+//         const res = await fetch('http://localhost:5055/dashboard-delivery');
 //         const data = await res.json();
 
 //         const today = new Date().toISOString().split('T')[0];
@@ -1240,7 +1240,7 @@
 //   useEffect(() => {
 //     const fetchData = async () => {
 //       try {
-//         const res = await fetch('http://localhost:3001/dashboard-delivery');
+//         const res = await fetch('http://localhost:5055/dashboard-delivery');
 //         const data = await res.json();
 
 //         const today = new Date().toISOString().split('T')[0];
@@ -1666,7 +1666,7 @@ export default function DeliveryDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch("http://localhost:3001/dashboard-delivery");
+        const res = await fetch("http://localhost:5055/dashboard-delivery");
         const data = await res.json();
 
         const today = new Date().toISOString().split("T")[0];

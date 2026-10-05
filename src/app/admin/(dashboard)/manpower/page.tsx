@@ -32,7 +32,7 @@ export default function ManpowerPage() {
   const fetchManpower = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:3001/manpower", {
+      const res = await fetch("http://localhost:5055/manpower", {
         credentials: "include",
       });
       const json = await res.json();
@@ -46,8 +46,8 @@ export default function ManpowerPage() {
   const handleSave = async (values: any) => {
     const method = formData.id ? "PATCH" : "POST";
     const url = formData.id
-      ? `http://localhost:3001/manpower/${formData.id}`
-      : `http://localhost:3001/manpower`;
+      ? `http://localhost:5055/manpower/${formData.id}`
+      : `http://localhost:5055/manpower`;
 
     try {
       const res = await fetch(url, {
@@ -71,7 +71,7 @@ export default function ManpowerPage() {
 
   const handleDelete = async (id: number) => {
     try {
-      await fetch(`http://localhost:3001/manpower/${id}`, {
+      await fetch(`http://localhost:5055/manpower/${id}`, {
         method: "DELETE",
         credentials: "include",
       });

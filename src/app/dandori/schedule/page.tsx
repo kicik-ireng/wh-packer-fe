@@ -66,10 +66,10 @@ export default function ScheduleTruckDO() {
     try {
       const [trucksRes, driversRes, customersRes, schedulesRes] =
         await Promise.all([
-          fetch("http://localhost:3001/truck").then((r) => r.json()),
-          fetch("http://localhost:3001/driver").then((r) => r.json()),
-          fetch("http://localhost:3001/customer").then((r) => r.json()),
-          fetch("http://localhost:3001/schedule-truck").then((r) => r.json()),
+          fetch("http://localhost:5055/truck").then((r) => r.json()),
+          fetch("http://localhost:5055/driver").then((r) => r.json()),
+          fetch("http://localhost:5055/customer").then((r) => r.json()),
+          fetch("http://localhost:5055/schedule-truck").then((r) => r.json()),
         ]);
       setTrucks(trucksRes);
       setDrivers(driversRes);
@@ -118,7 +118,7 @@ export default function ScheduleTruckDO() {
         cycle: values.cycle,
       };
 
-      const res = await fetch("http://localhost:3001/schedule-truck", {
+      const res = await fetch("http://localhost:5055/schedule-truck", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
