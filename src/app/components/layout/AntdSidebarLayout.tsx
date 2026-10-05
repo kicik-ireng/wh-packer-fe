@@ -97,6 +97,7 @@ export default function AntdSidebarLayout({
           ],
         },
         { key: '/admin/stock-opname', label: 'Stock Opname' },
+        { key: '/admin/traceability', label: 'Traceability (Tx)' },
       ],
     },
     {
