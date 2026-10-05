@@ -96,6 +96,7 @@ export default function AntdSidebarLayout({
             { key: '/admin/stock/4r', label: 'Stock 4R' },
           ],
         },
+        { key: '/admin/stock-opname', label: 'Stock Opname' },
       ],
     },
     {

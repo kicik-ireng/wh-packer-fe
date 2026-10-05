@@ -42,6 +42,7 @@ export default function AdminDashboardPage() {
   const [incomingPieData, setIncomingPieData] = useState<{ name: string; value: number }[]>([]);
   const [problemPieData, setProblemPieData] = useState<{ name: string; value: number }[]>([]);
   const [topModelData, setTopModelData] = useState<{ name: string; count: number }[]>([]);
+  const [topStockData, setTopStockData] = useState<{ name: string; stock: number; type: string }[]>([]);
 
   const COLORS = ["#10b981", "#f59e0b", "#ef4444", "#3b82f6", "#8b5cf6", "#ec4899", "#14b8a6"];
 
@@ -54,12 +55,16 @@ export default function AdminDashboardPage() {
           problemRes,
           incoming2RRes,
           incoming4RRes,
+          stock2RRes,
+          stock4RRes,
         ] = await Promise.all([
           fetch("http://localhost:5055/manpower", { credentials: "include" }),
           fetch("http://localhost:5055/packing-report", { credentials: "include" }),
           fetch("http://localhost:5055/production-problem", { credentials: "include" }),
           fetch("http://localhost:5055/incoming2r", { credentials: "include" }),
           fetch("http://localhost:5055/incoming4r", { credentials: "include" }),
+          fetch("http://localhost:5055/stock/2r", { credentials: "include" }),
+          fetch("http://localhost:5055/stock/4r", { credentials: "include" }),
         ]);
 
         const manpowerData = await manpowerRes.json();
@@ -67,6 +72,8 @@ export default function AdminDashboardPage() {
         const problemsData = await problemRes.json();
         const incoming2RData = await incoming2RRes.json();
         const incoming4RData = await incoming4RRes.json();
+        const stock2RData = await stock2RRes.json();
+        const stock4RData = await stock4RRes.json();
 
         const allEntries = packingData.flatMap((report: any) =>
           (report.entries || []).map((entry: any) => ({
@@ -151,6 +158,32 @@ export default function AdminDashboardPage() {
           .slice(0, 7)
           .map(([name, count]) => ({ name: name.length > 15 ? name.substring(0, 15) + "..." : name, count }));
         setTopModelData(sortedModels);
+
+        // 5. Chart calculations for Top Stock
+        let combinedStock: { name: string; stock: number; type: string }[] = [];
+        if (Array.isArray(stock2RData)) {
+          combinedStock = combinedStock.concat(
+            stock2RData.map((s: any) => ({
+              name: s.part2r?.model || s.part2r?.oeNo || "2R Part",
+              stock: s.totalStock || 0,
+              type: "2R",
+            }))
+          );
+        }
+        if (Array.isArray(stock4RData)) {
+          combinedStock = combinedStock.concat(
+            stock4RData.map((s: any) => ({
+              name: s.part4r?.model || s.part4r?.oeNo || "4R Part",
+              stock: s.totalStock || 0,
+              type: "4R",
+            }))
+          );
+        }
+        const sortedStocks = combinedStock
+          .sort((a, b) => b.stock - a.stock)
+          .slice(0, 10)
+          .map((item) => ({ ...item, name: item.name.length > 15 ? item.name.substring(0, 15) + "..." : item.name }));
+        setTopStockData(sortedStocks);
 
       } catch (error) {
         console.error("Gagal load data dashboard:", error);
@@ -338,6 +371,33 @@ export default function AdminDashboardPage() {
                   />
                   <Legend verticalAlign="bottom" height={36} />
                 </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* TOP STOCK CHART */}
+      <Row gutter={[16, 16]}>
+        <Col xs={24}>
+          <Card title="Top 10 Part dengan Sisa Stock Terbanyak (2R & 4R)" bordered={false} className="shadow-sm">
+            <div className="h-[350px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={topStockData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fill: "#888", fontSize: 12 }} />
+                  <YAxis tick={{ fill: "#888" }} />
+                  <Tooltip
+                    cursor={{ fill: 'transparent' }}
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    formatter={(value, name, props) => [`${value} Pcs`, `Tipe: ${props.payload.type}`]}
+                  />
+                  <Bar dataKey="stock" radius={[4, 4, 0, 0]}>
+                    {topStockData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.type === "2R" ? "#14b8a6" : "#f43f5e"} />
+                    ))}
+                  </Bar>
+                </BarChart>
               </ResponsiveContainer>
             </div>
           </Card>
