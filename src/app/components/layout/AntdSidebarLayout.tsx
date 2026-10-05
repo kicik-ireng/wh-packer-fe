@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Layout, Menu, theme, Button } from 'antd';
+import { Layout, Menu, theme, Button, MenuProps } from 'antd';
 import {
   DashboardOutlined,
   AppstoreOutlined,
@@ -49,7 +49,7 @@ export default function AntdSidebarLayout({
     }
   };
 
-  const menuItems = [
+  const menuItems: MenuProps['items'] = [
     {
       key: '/admin/dashboard',
       icon: <DashboardOutlined />,
