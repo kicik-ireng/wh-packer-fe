@@ -212,6 +212,13 @@ const Sidebar = () => {
           </h3>
           <div className="space-y-1">
             <SidebarItem
+              href="/admin/traceability"
+              label="Traceability (Tx)"
+              icon={<FileBarChart2 size={20} />}
+              collapsed={collapsed}
+            />
+
+            <SidebarItem
               href="/admin/packing-report"
               label="Packing Report"
               icon={iconMap["/admin/packing-report"]}
