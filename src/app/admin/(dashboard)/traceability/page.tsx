@@ -1,7 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Search } from "lucide-react";
+import { FiClipboard } from "react-icons/fi";
+import { Input, Tag, Space, message, Button } from "antd";
+import { SearchOutlined, ClearOutlined } from "@ant-design/icons";
+import ModernTable from "@/src/app/components/ModernTable";
 
 interface StockTransaction {
   id: number;
@@ -15,8 +18,8 @@ interface StockTransaction {
   reference?: string | null;
   description?: string | null;
   createdAt: string;
-  part2r?: { emiPartName: string; codeNo: string } | null;
-  part4r?: { model: string; codeNo: string } | null;
+  part2r?: { emiPartName: string; codeNo: string; model: string; oeNo: string } | null;
+  part4r?: { model: string; codeNo: string; oeNo: string } | null;
 }
 
 export default function TraceabilityPage() {
@@ -34,9 +37,12 @@ export default function TraceabilityPage() {
       if (res.ok) {
         const data = await res.json();
         setTransactions(data);
+      } else {
+        message.error("Gagal mengambil data transaksi");
       }
     } catch (error) {
       console.error("Error fetching transactions:", error);
+      message.error("Terjadi kesalahan jaringan");
     } finally {
       setLoading(false);
     }
@@ -46,131 +52,133 @@ export default function TraceabilityPage() {
     fetchTransactions();
   }, []);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearch = () => {
     fetchTransactions(reference);
   };
 
-  return (
-    <main className="p-6 bg-gray-50 min-h-screen">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <header className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <div>
-            <h1 className="text-3xl font-extrabold text-gray-800 tracking-tight">Traceability / Tx Log</h1>
-            <p className="text-gray-500 mt-1">Lacak riwayat transaksi masuk/keluar berdasarkan Part atau PR ID</p>
-          </div>
-          
-          <form onSubmit={handleSearch} className="flex gap-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-              <input 
-                type="text" 
-                placeholder="Cari PR ID (PCS...)" 
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={reference}
-                onChange={(e) => setReference(e.target.value)}
-              />
-            </div>
-            <button 
-              type="submit" 
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-            >
-              Cari
-            </button>
-            {reference && (
-              <button 
-                type="button"
-                onClick={() => {
-                  setReference("");
-                  fetchTransactions("");
-                }}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
-              >
-                Clear
-              </button>
-            )}
-          </form>
-        </header>
+  const handleClear = () => {
+    setReference("");
+    fetchTransactions("");
+  };
 
-        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-100 text-gray-700 text-sm font-semibold uppercase tracking-wider">
-                  <th className="p-4 border-b">Tanggal</th>
-                  <th className="p-4 border-b">Part / Model</th>
-                  <th className="p-4 border-b">Type</th>
-                  <th className="p-4 border-b">Qty (Sblm ➔ Ssdh)</th>
-                  <th className="p-4 border-b">Change</th>
-                  <th className="p-4 border-b">PIC</th>
-                  <th className="p-4 border-b">Reference (PR/DO)</th>
-                  <th className="p-4 border-b">Keterangan</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {loading ? (
-                  <tr>
-                    <td colSpan={8} className="p-8 text-center text-gray-500">
-                      <div className="flex justify-center mb-2">
-                        <div className="w-8 h-8 border-4 border-blue-400 border-t-blue-600 rounded-full animate-spin"></div>
-                      </div>
-                      Memuat data...
-                    </td>
-                  </tr>
-                ) : transactions.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="p-8 text-center text-gray-500">
-                      Tidak ada transaksi ditemukan.
-                    </td>
-                  </tr>
-                ) : (
-                  transactions.map((tx) => (
-                    <tr key={tx.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="p-4 whitespace-nowrap text-sm text-gray-600">
-                        {new Date(tx.createdAt).toLocaleString("id-ID")}
-                      </td>
-                      <td className="p-4">
-                        {tx.part2r && (
-                          <div className="text-sm font-medium text-gray-800">
-                            2R: {tx.part2r.emiPartName} <br/>
-                            <span className="text-xs text-gray-500">{tx.part2r.codeNo}</span>
-                          </div>
-                        )}
-                        {tx.part4r && (
-                          <div className="text-sm font-medium text-gray-800">
-                            4R: {tx.part4r.model} <br/>
-                            <span className="text-xs text-gray-500">{tx.part4r.codeNo}</span>
-                          </div>
-                        )}
-                      </td>
-                      <td className="p-4">
-                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                          tx.type === "IN" ? "bg-green-100 text-green-700" :
-                          tx.type === "OUT" ? "bg-red-100 text-red-700" :
-                          "bg-yellow-100 text-yellow-700"
-                        }`}>
-                          {tx.type}
-                        </span>
-                      </td>
-                      <td className="p-4 text-sm font-mono text-gray-600">
-                        {tx.qtyBefore} ➔ {tx.qtyAfter}
-                      </td>
-                      <td className="p-4 text-sm font-bold">
-                        <span className={tx.qtyChange > 0 ? "text-green-600" : tx.qtyChange < 0 ? "text-red-600" : "text-gray-500"}>
-                          {tx.qtyChange > 0 ? `+${tx.qtyChange}` : tx.qtyChange}
-                        </span>
-                      </td>
-                      <td className="p-4 text-sm text-gray-700">{tx.pic || "-"}</td>
-                      <td className="p-4 text-sm font-mono bg-gray-50 rounded">{tx.reference || "-"}</td>
-                      <td className="p-4 text-sm text-gray-500">{tx.description || "-"}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </div>
-    </main>
+  const columns: any = [
+    {
+      title: "Tanggal",
+      dataIndex: "createdAt",
+      key: "createdAt",
+      width: 180,
+      render: (text: string) => new Date(text).toLocaleString("id-ID"),
+    },
+    {
+      title: "Part / Model",
+      key: "part",
+      render: (_: any, record: StockTransaction) => {
+        if (record.part2r) {
+          return (
+            <div>
+              <Tag color="cyan">2R</Tag> {record.part2r.model || record.part2r.emiPartName} <br/>
+              <span className="text-xs text-gray-500">{record.part2r.codeNo || record.part2r.oeNo}</span>
+            </div>
+          );
+        }
+        if (record.part4r) {
+          return (
+            <div>
+              <Tag color="magenta">4R</Tag> {record.part4r.model} <br/>
+              <span className="text-xs text-gray-500">{record.part4r.codeNo || record.part4r.oeNo}</span>
+            </div>
+          );
+        }
+        return "-";
+      },
+    },
+    {
+      title: "Type",
+      dataIndex: "type",
+      key: "type",
+      width: 100,
+      align: "center",
+      render: (type: string) => {
+        const color = type === "IN" ? "green" : type === "OUT" ? "red" : "orange";
+        return <Tag color={color}>{type}</Tag>;
+      },
+    },
+    {
+      title: "Qty (Sblm ➔ Ssdh)",
+      key: "qtyTransition",
+      align: "center",
+      render: (_: any, record: StockTransaction) => (
+        <span className="font-mono text-gray-600">
+          {record.qtyBefore} ➔ {record.qtyAfter}
+        </span>
+      ),
+    },
+    {
+      title: "Change",
+      dataIndex: "qtyChange",
+      key: "qtyChange",
+      align: "center",
+      render: (change: number) => {
+        const isPositive = change > 0;
+        const isNegative = change < 0;
+        const className = isPositive ? "text-green-600" : isNegative ? "text-red-600" : "text-gray-500";
+        return (
+          <span className={`font-bold ${className}`}>
+            {isPositive ? `+${change}` : change}
+          </span>
+        );
+      },
+    },
+    {
+      title: "PIC",
+      dataIndex: "pic",
+      key: "pic",
+      render: (pic: string) => pic || "-",
+    },
+    {
+      title: "Reference (PR/DO)",
+      dataIndex: "reference",
+      key: "reference",
+      render: (ref: string) => ref ? <Tag color="blue">{ref}</Tag> : "-",
+    },
+    {
+      title: "Keterangan",
+      dataIndex: "description",
+      key: "description",
+      render: (desc: string) => desc || "-",
+    },
+  ];
+
+  return (
+    <div className="w-full">
+      <ModernTable
+        title="Traceability / Tx Log"
+        icon={<FiClipboard size={24} className="text-blue-600" />}
+        extraActions={
+          <Space>
+            <Input
+              placeholder="Cari PR ID (PCS...)"
+              value={reference}
+              onChange={(e) => setReference(e.target.value)}
+              onPressEnter={handleSearch}
+              style={{ width: 250 }}
+              prefix={<SearchOutlined className="text-gray-400" />}
+            />
+            <Button type="primary" onClick={handleSearch}>
+              Cari
+            </Button>
+            {reference && (
+              <Button icon={<ClearOutlined />} onClick={handleClear}>
+                Clear
+              </Button>
+            )}
+          </Space>
+        }
+        columns={columns}
+        dataSource={transactions}
+        rowKey="id"
+        loading={loading}
+      />
+    </div>
   );
 }
