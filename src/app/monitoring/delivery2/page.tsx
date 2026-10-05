@@ -58,7 +58,7 @@
 //   useEffect(() => {
 //     const fetchData = async () => {
 //       try {
-//         const res = await fetch('http://10.10.10.5:3001/dashboard-delivery');
+//         const res = await fetch('http://localhost:3001/dashboard-delivery');
 //         const data = await res.json();
 //         const today = new Date().toISOString().split('T')[0];
 //         const filtered = data.filter((d: DeliveryOrder) =>
@@ -370,8 +370,8 @@
 //     const fetchAll = async () => {
 //       try {
 //         const [resDO, resSchedule] = await Promise.all([
-//           fetch('http://10.10.10.5:3001/delivery-order'),
-//           fetch('http://10.10.10.5:3001/schedule-truck'),
+//           fetch('http://localhost:3001/delivery-order'),
+//           fetch('http://localhost:3001/schedule-truck'),
 //         ]);
 
 //         if (!resDO.ok) throw new Error('Failed fetching delivery-order');
@@ -701,8 +701,8 @@
 //     const fetchAll = async () => {
 //       try {
 //         const [resDO, resSchedule] = await Promise.all([
-//           fetch('http://10.10.10.5:3001/delivery-order'),
-//           fetch('http://10.10.10.5:3001/schedule-truck'),
+//           fetch('http://localhost:3001/delivery-order'),
+//           fetch('http://localhost:3001/schedule-truck'),
 //         ]);
 
 //         if (!resDO.ok) throw new Error('Failed fetching delivery-order');
@@ -1027,8 +1027,8 @@ export default function DeliveryDashboard() {
     const fetchAll = async () => {
       try {
         const [resDO, resSchedule] = await Promise.all([
-          fetch("http://10.10.10.5:3001/delivery-order"),
-          fetch("http://10.10.10.5:3001/schedule-truck"),
+          fetch("http://localhost:3001/delivery-order"),
+          fetch("http://localhost:3001/schedule-truck"),
         ]);
 
         if (!resDO.ok) throw new Error("Failed fetching delivery-order");
@@ -1188,20 +1188,20 @@ export default function DeliveryDashboard() {
           orders: orders.length
             ? orders
             : [
-                {
+              {
+                id: -1,
+                noDo: "-",
+                date: s.scheduleAt || new Date().toISOString(),
+                driver: s.driver || null,
+                schedule: s,
+                customer: cust.customer || {
                   id: -1,
-                  noDo: "-",
-                  date: s.scheduleAt || new Date().toISOString(),
-                  driver: s.driver || null,
-                  schedule: s,
-                  customer: cust.customer || {
-                    id: -1,
-                    name: "No Delivery Yet",
-                    address: "",
-                  },
-                  items: [],
+                  name: "No Delivery Yet",
+                  address: "",
                 },
-              ],
+                items: [],
+              },
+            ],
         });
       }
 

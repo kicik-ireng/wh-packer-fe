@@ -94,7 +94,7 @@ export default function DeliveryOrderPageAntd() {
 
   const fetchDrivers = async () => {
     try {
-      const res = await fetch("http://10.10.10.5:3001/driver", {
+      const res = await fetch("http://localhost:3001/driver", {
         credentials: "include",
       });
       const json = await res.json();
@@ -111,7 +111,7 @@ export default function DeliveryOrderPageAntd() {
     async function fetchDO() {
       try {
         setLoading(true);
-        const res = await fetch("http://10.10.10.5:3001/delivery-order", {
+        const res = await fetch("http://localhost:3001/delivery-order", {
           credentials: "include",
         });
         const json = await res.json();
@@ -243,7 +243,7 @@ export default function DeliveryOrderPageAntd() {
 
     try {
       const res = await fetch(
-        `http://10.10.10.5:3001/delivery-item/${editItem.id}`,
+        `http://localhost:3001/delivery-item/${editItem.id}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -259,7 +259,7 @@ export default function DeliveryOrderPageAntd() {
       setEditItem(null);
 
       // refresh data
-      const updated = await fetch("http://10.10.10.5:3001/delivery-order", {
+      const updated = await fetch("http://localhost:3001/delivery-order", {
         credentials: "include",
       });
       const json = await updated.json();
@@ -299,7 +299,7 @@ export default function DeliveryOrderPageAntd() {
         return;
       }
 
-      const res = await fetch(`http://10.10.10.5:3001/delivery-order/${id}`, {
+      const res = await fetch(`http://localhost:3001/delivery-order/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -334,7 +334,7 @@ export default function DeliveryOrderPageAntd() {
     setSelectedDate(null);
 
     try {
-      const updated = await fetch("http://10.10.10.5:3001/delivery-order", {
+      const updated = await fetch("http://localhost:3001/delivery-order", {
         credentials: "include",
       });
       const json = await updated.json();
@@ -346,7 +346,7 @@ export default function DeliveryOrderPageAntd() {
 
   const handleDelete = async (id: number) => {
     try {
-      const res = await fetch(`http://10.10.10.5:3001/delivery-order/${id}`, {
+      const res = await fetch(`http://localhost:3001/delivery-order/${id}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -467,7 +467,7 @@ export default function DeliveryOrderPageAntd() {
   ];
   const handleDeleteItem = async (id: number) => {
     try {
-      const res = await fetch(`http://10.10.10.5:3001/delivery-item/${id}`, {
+      const res = await fetch(`http://localhost:3001/delivery-item/${id}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -475,7 +475,7 @@ export default function DeliveryOrderPageAntd() {
       message.success("Item berhasil dihapus");
 
       // Refresh data
-      const updated = await fetch("http://10.10.10.5:3001/delivery-order", {
+      const updated = await fetch("http://localhost:3001/delivery-order", {
         credentials: "include",
       });
       const json = await updated.json();
@@ -702,13 +702,7 @@ export default function DeliveryOrderPageAntd() {
   };
 
   return (
-    <div
-      style={{
-        maxWidth: "calc(100vw - 48px)",
-        margin: "0 auto",
-        padding: "24px",
-      }}
-    >
+    <div className="w-full">
       <Card
         title={
           <Space>
@@ -731,7 +725,7 @@ export default function DeliveryOrderPageAntd() {
                 if (!filterDate) return message.warning("Pilih tanggal dulu");
                 const dateStr = filterDate.format("YYYY-MM-DD");
                 const link = document.createElement("a");
-                link.href = `http://10.10.10.5:3001/delivery-order/export-excel/${dateStr}?type=${filterType}`;
+                link.href = `http://localhost:3001/delivery-order/export-excel/${dateStr}?type=${filterType}`;
                 link.download = `delivery_orders_${dateStr}.xlsx`;
                 link.click();
               }}
@@ -790,6 +784,7 @@ export default function DeliveryOrderPageAntd() {
             showTotal: (total) => `Total ${total} orders`,
           }}
           scroll={{ x: 1000 }}
+          size="small"
           expandable={{
             expandedRowRender,
             expandedRowKeys,

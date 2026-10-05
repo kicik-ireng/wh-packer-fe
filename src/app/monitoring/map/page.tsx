@@ -53,7 +53,7 @@ export default function DeliveryDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch("http://10.10.10.5:3001/dashboard-delivery");
+        const res = await fetch("http://localhost:3001/dashboard-delivery");
         const data = await res.json();
 
         const today = new Date().toISOString().split("T")[0];

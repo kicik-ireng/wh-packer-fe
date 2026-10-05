@@ -88,7 +88,7 @@ export default function PackingReportPage() {
 
   const fetchReportsData = useCallback(async () => {
     try {
-      const res = await fetch("http://10.10.10.5:3001/packing-report", {
+      const res = await fetch("http://localhost:3001/packing-report", {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Gagal fetch data");
@@ -134,7 +134,7 @@ export default function PackingReportPage() {
     const fetchManpower = async () => {
       setLoadingManpower(true);
       try {
-        const res = await fetch("http://10.10.10.5:3001/manpower");
+        const res = await fetch("http://localhost:3001/manpower");
         const data = await res.json();
         setManpowerList(
           data.map((m: any) => ({ value: m.id.toString(), label: m.name })),
@@ -162,8 +162,8 @@ export default function PackingReportPage() {
       try {
         const url =
           form.type === "2R"
-            ? "http://10.10.10.5:3001/incoming2r"
-            : "http://10.10.10.5:3001/incoming4r";
+            ? "http://localhost:3001/incoming2r"
+            : "http://localhost:3001/incoming4r";
         const res = await fetch(url, { signal: controller.signal });
         const data = await res.json();
 
@@ -447,7 +447,7 @@ export default function PackingReportPage() {
         })),
       };
 
-      const res = await fetch("http://10.10.10.5:3001/packing-report", {
+      const res = await fetch("http://localhost:3001/packing-report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -507,19 +507,19 @@ export default function PackingReportPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-950 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-screen-2xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-950 py-1 px-1">
+      <div className="w-full space-y-2">
         <Toaster position="top-center" />
 
         {/* --- HEADER TITLE --- */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-6">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 bg-white dark:bg-gray-900 rounded-none shadow-sm border border-gray-200 dark:border-gray-800 p-4">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
             <HiClipboardList className="text-blue-600 dark:text-blue-400 text-3xl md:text-4xl" />
             Packing Daily Report
           </h1>
           <Link
             href="/manpower/production-problem"
-            className="inline-flex items-center gap-2 text-sm font-medium bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-4 py-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors border border-red-100 dark:border-red-800"
+            className="inline-flex items-center gap-2 text-sm font-medium bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-4 py-2 rounded-none hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors border border-red-100 dark:border-red-800"
           >
             <HiOutlineExclamationCircle className="text-xl" />
             Masalah Produksi
@@ -527,14 +527,14 @@ export default function PackingReportPage() {
         </div>
 
         {/* --- TOP SETTINGS: CONFIG & MANPOWER --- */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-2">
           {/* Base Configuration Card */}
-          <section className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-6">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-5 flex items-center gap-2">
+          <section className="bg-white dark:bg-gray-900 rounded-none shadow-sm border border-gray-200 dark:border-gray-800 p-4">
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
               <HiOutlineAdjustments className="text-blue-500 text-xl" />{" "}
               Konfigurasi Produksi
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1.5">
                 <label
                   htmlFor="tanggalPacking"
@@ -548,7 +548,7 @@ export default function PackingReportPage() {
                   name="tanggalPacking"
                   value={form.tanggalPacking}
                   onChange={handleChange}
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow"
+                  className="w-full rounded-none border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow"
                 />
               </div>
 
@@ -565,7 +565,7 @@ export default function PackingReportPage() {
                   name="lineNo"
                   value={form.lineNo}
                   onChange={handleChange}
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow"
+                  className="w-full rounded-none border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow"
                 >
                   <option value="">Pilih Line</option>
                   {Array.from({ length: 8 }, (_, i) => (
@@ -589,7 +589,7 @@ export default function PackingReportPage() {
                   name="type"
                   value={form.type}
                   onChange={handleChange}
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow"
+                  className="w-full rounded-none border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow"
                 >
                   <option value="">Pilih Tipe</option>
                   <option value="2R">2R</option>
@@ -600,12 +600,12 @@ export default function PackingReportPage() {
           </section>
 
           {/* Manpower / PIC Card */}
-          <section className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-6">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-5 flex items-center gap-2">
+          <section className="bg-white dark:bg-gray-900 rounded-none shadow-sm border border-gray-200 dark:border-gray-800 p-4">
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
               <HiOutlineUsers className="text-blue-500 text-xl" /> Person In
               Charge (PIC)
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   PIC 1 *
@@ -682,157 +682,147 @@ export default function PackingReportPage() {
         </div>
 
         {/* --- DATA ENTRY TABLE CARD --- */}
-        <section className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 flex flex-col space-y-4">
-          <div className="flex items-center justify-between">
+        <section className="bg-white dark:bg-gray-900 rounded-none shadow-sm border border-gray-200 dark:border-gray-800 p-4 flex flex-col space-y-2">
+          <div className="flex items-center justify-between mb-2">
             <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
               <HiClipboardList className="text-blue-500 text-xl" /> Form Input
               Data Packing
             </h2>
             <button
               onClick={addEntry}
-              className="flex items-center gap-1.5 text-sm bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 px-3 py-1.5 rounded-lg transition-colors font-medium border border-blue-200 dark:border-blue-800"
+              className="flex items-center gap-1.5 text-sm bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 px-3 py-1.5 rounded-none transition-colors font-medium border border-blue-200 dark:border-blue-800"
             >
               <AiOutlinePlus /> Tambah Baris
             </button>
           </div>
 
-          <div className="w-full border border-gray-200 dark:border-gray-700 rounded-xl overflow-x-auto pb-4">
-            <table className="w-full text-sm text-gray-700 dark:text-gray-200 min-w-[1000px]">
-              <thead className="bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 font-semibold border-b border-gray-200 dark:border-gray-700">
-                <tr>
-                  {[
-                    "No",
-                    "Mulai",
-                    "Selesai",
-                    "Menit",
-                    "Req No",
-                    "Explanner",
-                    "Part No",
-                    "Plan",
-                    "Actual",
-                    "Balance",
-                    "Aksi",
-                  ].map((header, index) => (
-                    <th
-                      key={index}
-                      className="px-3 py-3 text-center whitespace-nowrap"
-                    >
-                      {header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {form.entries.map((entry, i) => (
-                  <tr
-                    key={entry.no}
-                    className="hover:bg-gray-50/50 dark:hover:bg-gray-800/20 transition-colors"
+          <div className="w-full space-y-4 pb-4">
+            {form.entries.map((entry, i) => (
+              <div 
+                key={entry.no} 
+                className="border border-gray-200 dark:border-gray-700 rounded-none bg-white dark:bg-gray-800/40 p-3 md:p-4 relative shadow-sm transition-all hover:border-blue-300"
+              >
+                {/* Header Card */}
+                <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-2 mb-3">
+                  <h3 className="font-bold text-blue-600 dark:text-blue-400 text-sm md:text-base">
+                    Entry #{entry.no}
+                  </h3>
+                  <button
+                    onClick={() => removeEntry(i)}
+                    className="flex items-center gap-1.5 text-xs font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 px-2 py-1 rounded-none transition-colors"
                   >
-                    <td className="px-2 py-3 text-center font-medium text-gray-500">
-                      {entry.no}
-                    </td>
-                    <td className="px-2 py-3 text-center">
-                      <input
-                        type="time"
-                        value={entry.jamMulai}
-                        onChange={(e) =>
-                          updateEntry(i, "jamMulai", e.target.value)
-                        }
-                        className="w-[100px] rounded-md px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-center focus:ring-1 focus:ring-blue-500 outline-none mx-auto block"
-                      />
-                    </td>
-                    <td className="px-2 py-3 text-center">
-                      <input
-                        type="time"
-                        value={entry.jamSelesai}
-                        onChange={(e) =>
-                          updateEntry(i, "jamSelesai", e.target.value)
-                        }
-                        className="w-[100px] rounded-md px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-center focus:ring-1 focus:ring-blue-500 outline-none mx-auto block"
-                      />
-                    </td>
-                    <td className="px-2 py-3 text-center font-medium">
-                      <span className="bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-md">
-                        {entry.menitPacking}
-                      </span>
-                    </td>
-                    <td className="px-2 py-3 min-w-[200px] text-center">
-                      {/* FIX UTAMA SCROLL BERTUMPUK: menuPosition="fixed" */}
-                      <Select
-                        options={packingreqnoList}
-                        onChange={(selected) =>
-                          handlePackingReqNoChange(i, selected)
-                        }
-                        isLoading={loadingPackingReqNo}
-                        isClearable
-                        placeholder="Pilih Req"
-                        menuPosition="fixed"
-                        styles={{
-                          menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-                          control: (base) => ({
-                            ...base,
-                            minHeight: "36px",
-                            borderRadius: "0.375rem",
-                            borderColor: "#d1d5db",
-                          }),
-                        }}
-                        className="text-left w-full mx-auto"
-                      />
-                    </td>
-                    <td
-                      className="px-2 py-3 text-center text-xs truncate max-w-[120px]"
-                      title={entry.explannerNo}
-                    >
+                    <FaTrashAlt /> <span className="hidden sm:inline">Hapus Baris</span>
+                  </button>
+                </div>
+
+                {/* Form Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2 md:gap-3 items-end">
+                  
+                  {/* Waktu */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Mulai</label>
+                    <input
+                      type="time"
+                      value={entry.jamMulai}
+                      onChange={(e) => updateEntry(i, "jamMulai", e.target.value)}
+                      className="w-full rounded-none px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+                  
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Selesai</label>
+                    <input
+                      type="time"
+                      value={entry.jamSelesai}
+                      onChange={(e) => updateEntry(i, "jamSelesai", e.target.value)}
+                      className="w-full rounded-none px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+
+                  {/* Ref Data */}
+                  <div className="space-y-1.5 sm:col-span-2 md:col-span-2 lg:col-span-2">
+                    <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Packing Req No</label>
+                    <Select
+                      options={packingreqnoList}
+                      onChange={(selected) => handlePackingReqNoChange(i, selected)}
+                      isLoading={loadingPackingReqNo}
+                      isClearable
+                      placeholder="Pilih Req"
+                      styles={{
+                        control: (base) => ({
+                          ...base,
+                          minHeight: "38px",
+                          borderRadius: "0.5rem",
+                          borderColor: "#d1d5db",
+                        }),
+                      }}
+                      className="text-left w-full"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Explanner</label>
+                    <div className="w-full rounded-none px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 truncate border border-transparent" title={entry.explannerNo}>
                       {entry.explannerNo || "-"}
-                    </td>
-                    <td
-                      className="px-2 py-3 text-center text-xs truncate max-w-[120px]"
-                      title={entry.customerPartNo}
-                    >
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Part No</label>
+                    <div className="w-full rounded-none px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 truncate border border-transparent" title={entry.customerPartNo}>
                       {entry.customerPartNo || "-"}
-                    </td>
-                    <td className="px-2 py-3 text-center font-semibold text-gray-500">
+                    </div>
+                  </div>
+
+                  <div className="col-span-full border-t border-gray-100 dark:border-gray-700 my-2"></div>
+
+                  {/* Calculation / Output */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Menit</label>
+                    <div className="w-full rounded-none px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700/50 text-center font-bold text-gray-600 dark:text-gray-300 border border-transparent">
+                      {entry.menitPacking} m
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Qty Plan</label>
+                    <div className="w-full rounded-none px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700/50 text-center font-bold text-gray-600 dark:text-gray-300 border border-transparent">
                       {entry.qtyPlan}
-                    </td>
-                    <td className="px-2 py-3 text-center">
-                      <input
-                        type="number"
-                        placeholder="0"
-                        value={entry.qtyActualPacking || ""}
-                        onChange={(e) =>
-                          updateEntry(i, "qtyActualPacking", e.target.value)
-                        }
-                        className="w-[80px] rounded-md px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-center focus:ring-1 focus:ring-blue-500 outline-none mx-auto block font-semibold text-blue-700 dark:text-blue-400"
-                      />
-                    </td>
-                    <td className="px-2 py-3 text-center">
-                      <span
-                        className={`px-2 py-1 rounded-md font-semibold ${entry.balancePlanVsActual > 0 ? "bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400" : "bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"}`}
-                      >
-                        {entry.balancePlanVsActual}
-                      </span>
-                    </td>
-                    <td className="px-2 py-3 text-center">
-                      <button
-                        onClick={() => removeEntry(i)}
-                        className="text-red-500 hover:text-red-700 bg-red-50 dark:bg-red-900/20 p-2 rounded-lg transition-colors"
-                      >
-                        <FaTrashAlt />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wide flex items-center gap-1">
+                      Qty Actual <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="0"
+                      value={entry.qtyActualPacking || ""}
+                      onChange={(e) => updateEntry(i, "qtyActualPacking", e.target.value)}
+                      className="w-full rounded-none px-3 py-2 text-sm border-2 border-blue-200 dark:border-blue-700 bg-white dark:bg-gray-800 text-center focus:border-blue-500 outline-none font-bold text-blue-700 dark:text-blue-400"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Balance</label>
+                    <div className={`w-full rounded-none px-3 py-2 text-sm text-center font-bold border ${entry.balancePlanVsActual > 0 ? "bg-red-50 text-red-600 border-red-200 dark:bg-red-900/30 dark:border-red-800" : "bg-green-50 text-green-600 border-green-200 dark:bg-green-900/30 dark:border-green-800"}`}>
+                      {entry.balancePlanVsActual}
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            ))}
           </div>
         </section>
 
         {/* --- BOTTOM SECTION: KETERANGAN & SUBMIT --- */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <section className="lg:col-span-2 bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
+          <section className="lg:col-span-2 bg-white dark:bg-gray-900 rounded-none shadow-sm border border-gray-200 dark:border-gray-800 p-4">
             <label
               htmlFor="keterangan"
-              className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2"
+              className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2 flex items-center gap-2"
             >
               <HiOutlineDocumentText className="text-lg text-blue-500" />{" "}
               Keterangan Tambahan
@@ -844,17 +834,17 @@ export default function PackingReportPage() {
               value={form.keterangan}
               onChange={handleChange}
               placeholder="Catatan kendala mesin, delay material, dll..."
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 bg-gray-50 dark:bg-gray-800/50 focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none text-sm"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-none px-4 py-3 bg-gray-50 dark:bg-gray-800/50 focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none text-sm"
             />
           </section>
 
-          <section className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 flex flex-col justify-between space-y-4">
+          <section className="bg-white dark:bg-gray-900 rounded-none shadow-sm border border-gray-200 dark:border-gray-800 p-4 flex flex-col justify-between space-y-2">
             <div>
-              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">
+              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
                 Total Output
               </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 text-center border border-blue-100 dark:border-blue-800/30">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-none p-4 text-center border border-blue-100 dark:border-blue-800/30">
                   <p className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-1">
                     Total 2R
                   </p>
@@ -867,7 +857,7 @@ export default function PackingReportPage() {
                     )}
                   </p>
                 </div>
-                <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 text-center border border-purple-100 dark:border-purple-800/30">
+                <div className="bg-purple-50 dark:bg-purple-900/20 rounded-none p-4 text-center border border-purple-100 dark:border-purple-800/30">
                   <p className="text-sm font-medium text-purple-800 dark:text-purple-300 mb-1">
                     Total 4R
                   </p>
@@ -886,7 +876,7 @@ export default function PackingReportPage() {
             <button
               type="button"
               onClick={handleSubmit}
-              className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-3.5 rounded-xl font-semibold hover:bg-blue-700 focus:ring-4 focus:ring-blue-500/20 active:scale-[0.98] transition-all"
+              className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-3.5 rounded-none font-semibold hover:bg-blue-700 focus:ring-4 focus:ring-blue-500/20 active:scale-[0.98] transition-all"
             >
               <HiOutlineSave className="text-xl" />
               Simpan Laporan
@@ -895,8 +885,8 @@ export default function PackingReportPage() {
         </div>
 
         {/* --- REPORT HARI INI --- */}
-        <section className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 space-y-4">
-          <div className="flex justify-between items-center mb-2">
+        <section className="bg-white dark:bg-gray-900 rounded-none shadow-sm border border-gray-200 dark:border-gray-800 p-4 space-y-3">
+          <div className="flex justify-between items-center mb-1">
             <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
               📋 Laporan Masuk Hari Ini{" "}
               <span className="text-sm font-normal text-gray-500">
@@ -905,7 +895,7 @@ export default function PackingReportPage() {
             </h2>
           </div>
 
-          <div className="w-full border border-gray-200 dark:border-gray-700 rounded-xl overflow-x-auto">
+          <div className="w-full border border-gray-200 dark:border-gray-700 rounded-none overflow-x-auto">
             <table className="w-full text-sm text-gray-700 dark:text-gray-200 min-w-[800px]">
               <thead className="bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 text-left border-b border-gray-200 dark:border-gray-700">
                 <tr>
@@ -987,7 +977,7 @@ export default function PackingReportPage() {
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium"
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-none text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 ← Prev
               </button>
@@ -1004,7 +994,7 @@ export default function PackingReportPage() {
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium"
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-none text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 Next →
               </button>

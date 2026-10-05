@@ -1,16 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, X } from "lucide-react";
+import { Check, X, Trash } from "lucide-react";
 import * as XLSX from "sheetjs-style";
-import { saveAs } from "file-saver";
 import { useRouter } from "next/navigation";
-import { FiRefreshCw } from "react-icons/fi";
-import { FiPackage } from "react-icons/fi";
-import { FiCalendar } from "react-icons/fi";
-import { FiFileText } from "react-icons/fi";
-import { FiEdit } from "react-icons/fi";
-import { Trash } from "lucide-react";
+import { FiPackage, FiCalendar, FiFileText, FiEdit, FiSearch } from "react-icons/fi";
+import { Button, Space, Tag, Input, Select, Popconfirm, message, DatePicker, Modal } from "antd";
+import ModernTable from "@/src/app/components/ModernTable";
+import dayjs from "dayjs";
 
 interface Incoming2r {
   prId: string;
@@ -65,15 +62,10 @@ interface PackingEntry {
   Incoming4r?: Incoming4r | null;
   tanggalPacking: string;
   lineNo: string;
-  pic1?: Manpower;
-  pic2?: Manpower;
-  pic3?: Manpower;
+  pic1?: { id: number; name: string };
+  pic2?: { id: number; name: string };
+  pic3?: { id: number; name: string };
   createdAt?: string;
-}
-
-interface Manpower {
-  id: number;
-  name: string;
 }
 
 interface PackingReport {
@@ -83,9 +75,9 @@ interface PackingReport {
   qty2R: number;
   qty4R: number;
   keterangan: string;
-  pic1?: Manpower;
-  pic2?: Manpower;
-  pic3?: Manpower;
+  pic1?: { id: number; name: string };
+  pic2?: { id: number; name: string };
+  pic3?: { id: number; name: string };
   status: string;
   entries: PackingEntry[];
 }
@@ -94,22 +86,24 @@ export default function PackingReportPage() {
   const [data, setData] = useState<PackingEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedType, setSelectedType] = useState<string>("ALL");
-  const [showPRIDSearch, setShowPRIDSearch] = useState(false);
   const [searchPRID, setSearchPRID] = useState("");
+  
   const router = useRouter();
   const [editingEntryId, setEditingEntryId] = useState<number | null>(null);
   const [editedEntry, setEditedEntry] = useState<Partial<PackingEntry>>({});
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  // Export Modal States
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportStart, setExportStart] = useState<dayjs.Dayjs | null>(null);
+  const [exportEnd, setExportEnd] = useState<dayjs.Dayjs | null>(null);
 
   useEffect(() => {
     const verifyLogin = async () => {
       try {
-        const res = await fetch("http://10.10.10.5:3001/auth/verify", {
+        const res = await fetch("http://localhost:3001/auth/verify", {
           method: "POST",
           credentials: "include",
         });
@@ -122,99 +116,13 @@ export default function PackingReportPage() {
         router.replace("/admin/login");
       }
     };
-
     verifyLogin();
   }, [router]);
-
-  function sortData(entries: PackingEntry[], type: string): PackingEntry[] {
-    let sorted = [...entries];
-
-    if (type === "ALL") {
-      sorted.sort(
-        (a, b) =>
-          new Date(
-            b.createdAt ||
-              b.Incoming2r?.createdAt ||
-              b.Incoming4r?.createdAt ||
-              "",
-          ).getTime() -
-          new Date(
-            a.createdAt ||
-              a.Incoming2r?.createdAt ||
-              a.Incoming4r?.createdAt ||
-              "",
-          ).getTime(),
-      );
-    } else {
-      sorted.sort((a, b) => {
-        if (a.status === "PENDING" && b.status !== "PENDING") return -1;
-        if (a.status !== "PENDING" && b.status === "PENDING") return 1;
-
-        const dateA = new Date(a.tanggalPacking).getTime();
-        const dateB = new Date(b.tanggalPacking).getTime();
-
-        return dateB - dateA;
-      });
-    }
-
-    return sorted;
-  }
-
-  const startEditing = (entry: PackingEntry) => {
-    setEditingEntryId(entry.id);
-    setEditedEntry(entry);
-  };
-
-  const saveEditedEntry = async () => {
-    if (!editingEntryId) return;
-
-    try {
-      const res = await fetch(
-        `http://10.10.10.5:3001/packing-entry/${editingEntryId}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(editedEntry),
-          credentials: "include",
-        },
-      );
-
-      if (!res.ok) throw new Error("Gagal memperbarui entry");
-      await fetchData();
-      setEditingEntryId(null);
-      setEditedEntry({});
-    } catch (err: any) {
-      setError(err.message);
-    }
-  };
-  const handleDeleteEntry = async (entryId: number) => {
-    const confirmed = confirm("Yakin ingin menghapus entry ini?");
-    if (!confirmed) return;
-
-    try {
-      const res = await fetch(
-        `http://10.10.10.5:3001/packing-entry/${entryId}`,
-        {
-          method: "DELETE",
-          credentials: "include",
-        },
-      );
-
-      if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json.message || "Gagal menghapus entry");
-      }
-
-      await fetchData(); // Refresh setelah hapus
-    } catch (err: any) {
-      setError(err.message || "Gagal menghapus entry");
-    }
-  };
 
   async function fetchData() {
     setLoading(true);
     try {
-      const res = await fetch("http://10.10.10.5:3001/packing-report", {
+      const res = await fetch("http://localhost:3001/packing-report", {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Gagal mengambil data packing report");
@@ -233,9 +141,9 @@ export default function PackingReportPage() {
         })),
       );
 
-      setData(entriesWithReportInfo);
+      setData(sortData(entriesWithReportInfo, selectedType));
     } catch (e: any) {
-      setError(e.message || "Unknown error");
+      message.error(e.message || "Unknown error");
     } finally {
       setLoading(false);
     }
@@ -245,29 +153,168 @@ export default function PackingReportPage() {
     fetchData();
   }, []);
 
+  function sortData(entries: PackingEntry[], type: string): PackingEntry[] {
+    let sorted = [...entries];
+
+    if (type === "ALL") {
+      sorted.sort(
+        (a, b) =>
+          new Date(
+            b.createdAt ||
+            b.Incoming2r?.createdAt ||
+            b.Incoming4r?.createdAt ||
+            "",
+          ).getTime() -
+          new Date(
+            a.createdAt ||
+            a.Incoming2r?.createdAt ||
+            a.Incoming4r?.createdAt ||
+            "",
+          ).getTime(),
+      );
+    } else {
+      sorted.sort((a, b) => {
+        if (a.status === "PENDING" && b.status !== "PENDING") return -1;
+        if (a.status !== "PENDING" && b.status === "PENDING") return 1;
+
+        const dateA = new Date(a.tanggalPacking).getTime();
+        const dateB = new Date(b.tanggalPacking).getTime();
+
+        return dateB - dateA;
+      });
+    }
+
+    return sorted;
+  }
+
   useEffect(() => {
     setData((prev) => sortData(prev, selectedType));
   }, [selectedType]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedDate, selectedType, searchPRID]);
+  const startEditing = (entry: PackingEntry) => {
+    setEditingEntryId(entry.id);
+    setEditedEntry(entry);
+  };
+
+  const saveEditedEntry = async () => {
+    if (!editingEntryId) return;
+    try {
+      const res = await fetch(
+        `http://localhost:3001/packing-entry/${editingEntryId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(editedEntry),
+          credentials: "include",
+        },
+      );
+
+      if (!res.ok) throw new Error("Gagal memperbarui entry");
+      await fetchData();
+      setEditingEntryId(null);
+      setEditedEntry({});
+      message.success("Entry berhasil diupdate");
+    } catch (err: any) {
+      message.error(err.message);
+    }
+  };
+
+  const handleDeleteEntry = async (entryId: number) => {
+    try {
+      const res = await fetch(
+        `http://localhost:3001/packing-entry/${entryId}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        },
+      );
+
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.message || "Gagal menghapus entry");
+      }
+
+      await fetchData();
+      message.success("Entry berhasil dihapus");
+    } catch (err: any) {
+      message.error(err.message || "Gagal menghapus entry");
+    }
+  };
+
+  async function updateStatus(
+    entryId: number,
+    status: "APPROVED" | "REJECTED",
+  ) {
+    setActionLoadingId(entryId);
+    try {
+      const endpoint =
+        status === "APPROVED"
+          ? `http://localhost:3001/packing-entry/approve-grouped/${entryId}`
+          : `http://localhost:3001/packing-entry/reject-grouped/${entryId}`;
+
+      const res = await fetch(endpoint, {
+        method: "PATCH",
+        credentials: "include",
+      });
+
+      const resJson = await res.json();
+      if (!res.ok) throw new Error(resJson.message || "Gagal update status");
+
+      await fetchData();
+      message.success(`Status updated to ${status}`);
+    } catch (e: any) {
+      message.error(e.message);
+    } finally {
+      setActionLoadingId(null);
+    }
+  }
 
   const handleExportToExcel = async () => {
     const [part2r, part4r] = await Promise.all([
-      fetch("http://10.10.10.5:3001/part-database-2r", {
+      fetch("http://localhost:3001/part-database-2r", {
         credentials: "include",
       }).then((res) => res.json()),
-      fetch("http://10.10.10.5:3001/part-database-4r", {
+      fetch("http://localhost:3001/part-database-4r", {
         credentials: "include",
       }).then((res) => res.json()),
     ]);
 
+    let exportData = filtered;
+
+    if (exportStart && exportEnd) {
+      exportData = filtered.filter((entry) => {
+        // Gunakan dayjs untuk parse tanggal agar tidak kena isu timezone UTC shift (seperti toISOString)
+        const entryDate = dayjs(entry.tanggalPacking).format("YYYY-MM-DD");
+        
+        // Asumsi entry.jamMulai adalah format "HH:mm"
+        const entryStartDateTime = dayjs(`${entryDate} ${entry.jamMulai}`, "YYYY-MM-DD HH:mm");
+        const entryEndDateTime = dayjs(`${entryDate} ${entry.jamSelesai}`, "YYYY-MM-DD HH:mm");
+        
+        // Ambil data jika ada singgungan waktu (overlap)
+        // Atau jika waktu mulai/selesai berada di dalam rentang
+        const isStartInside = (entryStartDateTime.isAfter(exportStart) || entryStartDateTime.isSame(exportStart)) && 
+                              (entryStartDateTime.isBefore(exportEnd) || entryStartDateTime.isSame(exportEnd));
+        
+        const isEndInside = (entryEndDateTime.isAfter(exportStart) || entryEndDateTime.isSame(exportStart)) && 
+                            (entryEndDateTime.isBefore(exportEnd) || entryEndDateTime.isSame(exportEnd));
+                            
+        const isEnveloping = (entryStartDateTime.isBefore(exportStart) || entryStartDateTime.isSame(exportStart)) && 
+                             (entryEndDateTime.isAfter(exportEnd) || entryEndDateTime.isSame(exportEnd));
+
+        return isStartInside || isEndInside || isEnveloping;
+      });
+    }
+
+    if (exportData.length === 0) {
+      message.warning("Tidak ada data pada rentang waktu yang dipilih.");
+      return;
+    }
+
     const rows: any[] = [];
 
-    filtered.forEach((entry) => {
+    exportData.forEach((entry) => {
       const pics = [entry.pic1, entry.pic2, entry.pic3].filter(Boolean);
-      const jumlahPIC = pics.length || 1; // biar gak bagi nol
+      const jumlahPIC = pics.length || 1;
 
       const is4R = entry.type === "4R";
       const is2R = entry.type === "2R";
@@ -276,54 +323,11 @@ export default function PackingReportPage() {
         ? entry.Incoming4r?.assyNo16
         : entry.Incoming2r?.assyNo16;
 
-      // let codeNo = '';
-      // if (is4R && assyNo) {
-      //   const match = part4r.find((p: any) => p.assyNo16 === assyNo);
-      //   if (match) codeNo = match.codeNo || '';
-      // } else if (is2R && assyNo) {
-      //   const match = part2r.find((p: any) => p.assyNo16 === assyNo);
-      //   if (match) codeNo = match.codeNo || '';
-      // }
-      // let codeNo = '';
-
-      // // Untuk 4R: match berdasarkan assyNo16 + segment (seg) + oeNo
-      // if (
-      //   is4R &&
-      //   assyNo &&
-      //   entry.Incoming4r &&
-      //   entry.Incoming4r.seg &&
-      //   entry.Incoming4r.oeNo
-      // ) {
-      //   const match = part4r.find((p: any) =>
-      //     p.assyNo16 === assyNo &&
-      //     p.segment === entry.Incoming4r!.seg &&
-      //     p.oeNo === entry.Incoming4r!.oeNo
-      //   );
-      //   if (match) codeNo = match.codeNo || '';
-      // }
-
-      // // Untuk 2R: match berdasarkan assyNo16 + oeNo
-      // if (
-      //   is2R &&
-      //   assyNo &&
-      //   entry.Incoming2r &&
-      //   entry.Incoming2r.segment &&
-      //   entry.Incoming2r.oeNo
-      // ) {
-      //   const match = part2r.find((p: any) =>
-      //     p.assyNo16 === assyNo &&
-      //     p.oeNo === entry.Incoming2r!.oeNo
-      //   );
-      //   if (match) codeNo = match.codeNo || '';
-      // }
-      // Function Code No
-
       function normalize(str?: string): string {
         return str?.trim().toUpperCase() ?? "";
       }
       let codeNo = "";
 
-      // Untuk 4R: match berdasarkan assyNo16 + segment (seg) + oeNo
       if (
         is4R &&
         assyNo &&
@@ -340,7 +344,6 @@ export default function PackingReportPage() {
         if (match) codeNo = match.codeNo || "";
       }
 
-      // Untuk 2R: match berdasarkan assyNo16 + oeNo
       if (
         is2R &&
         assyNo &&
@@ -385,7 +388,7 @@ export default function PackingReportPage() {
             ? entry.Incoming4r?.model || "—"
             : entry.Incoming2r?.model || "—",
           Qty: qtyPerPic,
-          M: menit, // tetap total
+          M: menit,
           "M/H": mh.toFixed(2),
           "Pcs/M/H":
             typeof pcsPerMh === "string" ? pcsPerMh : pcsPerMh.toFixed(2),
@@ -403,7 +406,6 @@ export default function PackingReportPage() {
       });
     });
 
-    // Tentukan urutan kolom
     const header2R = [
       "MR ID",
       "Packing Member",
@@ -444,7 +446,6 @@ export default function PackingReportPage() {
     const worksheet = XLSX.utils.json_to_sheet(rows, { header: finalHeader });
     XLSX.utils.sheet_add_aoa(worksheet, [finalHeader], { origin: "A1" });
 
-    // Styling Header
     const range = XLSX.utils.decode_range(worksheet["!ref"]!);
     for (let C = range.s.c; C <= range.e.c; ++C) {
       const cell_address = XLSX.utils.encode_cell({ c: C, r: 0 });
@@ -453,23 +454,17 @@ export default function PackingReportPage() {
         cell.s = {
           font: { bold: true },
           alignment: { horizontal: "center" },
-          fill: {
-            fgColor: { rgb: "D9D9D9" }, // abu-abu
-          },
+          fill: { fgColor: { rgb: "D9D9D9" } },
         };
       }
     }
 
-    // Styling untuk seluruh isi cell (selain header)
     for (let R = 1; R <= range.e.r; ++R) {
-      // mulai dari baris ke-1 (baris ke-2 di Excel)
       for (let C = range.s.c; C <= range.e.c; ++C) {
         const cell_address = XLSX.utils.encode_cell({ c: C, r: R });
         const cell = worksheet[cell_address];
         if (cell && !cell.s) {
-          cell.s = {
-            alignment: { horizontal: "center" },
-          };
+          cell.s = { alignment: { horizontal: "center" } };
         }
       }
     }
@@ -478,62 +473,13 @@ export default function PackingReportPage() {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Packing Report");
 
-    // Enable styles
     XLSX.writeFile(
       workbook,
-      `PackingReport_${selectedType}_${selectedDate || "AllDates"}.xlsx`,
+      `PackingReport_${selectedType}_${exportStart ? exportStart.format("YYYYMMDD_HHmm") : "All"}.xlsx`,
       { bookType: "xlsx", cellStyles: true },
     );
-  };
-
-  async function updateStatus(
-    entryId: number,
-    status: "APPROVED" | "REJECTED",
-  ) {
-    setActionLoadingId(entryId);
-    try {
-      const endpoint =
-        status === "APPROVED"
-          ? `http://10.10.10.5:3001/packing-entry/approve-grouped/${entryId}`
-          : `http://10.10.10.5:3001/packing-entry/reject-grouped/${entryId}`;
-
-      const res = await fetch(endpoint, {
-        method: "PATCH",
-        credentials: "include",
-      });
-
-      const resJson = await res.json();
-      if (!res.ok) throw new Error(resJson.message || "Gagal update status");
-
-      await fetchData();
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setActionLoadingId(null);
-    }
-  }
-
-  const statusBadge = (status: string) => {
-    const base =
-      "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium";
-    switch (status) {
-      case "APPROVED":
-        return (
-          <span className={`${base} bg-green-100 text-green-700`}>
-            Approved
-          </span>
-        );
-      case "REJECTED":
-        return (
-          <span className={`${base} bg-red-100 text-red-700`}>Rejected</span>
-        );
-      default:
-        return (
-          <span className={`${base} bg-yellow-100 text-yellow-700`}>
-            Pending
-          </span>
-        );
-    }
+    
+    setShowExportModal(false);
   };
 
   const filtered = data.filter((entry) => {
@@ -554,379 +500,161 @@ export default function PackingReportPage() {
     return matchDate && matchType && matchPRID;
   });
 
-  const totalPages = Math.ceil(filtered.length / itemsPerPage);
-
-  const paginatedData = filtered.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage,
-  );
+  const columns: any = [
+    { title: "Tanggal Packing", dataIndex: "tanggalPacking", key: "tanggal", render: (t: string) => new Date(t).toLocaleDateString() },
+    { title: "Line No", dataIndex: "lineNo", key: "lineNo" },
+    { title: "Jam Mulai", dataIndex: "jamMulai", key: "jamMulai" },
+    { title: "Jam Selesai", dataIndex: "jamSelesai", key: "jamSelesai" },
+    { title: "Menit", dataIndex: "menitPacking", key: "menitPacking" },
+    { 
+      title: "Packing Req No (PRID)", 
+      key: "prid",
+      render: (_: any, record: PackingEntry) => (
+        <span className="font-medium text-blue-800">
+          {record.Incoming2r?.prId || record.Incoming4r?.prId || record.packingReqNo}
+        </span>
+      )
+    },
+    { title: "Explanner No", dataIndex: "explannerNo", key: "explannerNo" },
+    { title: "Customer Part No", dataIndex: "customerPartNo", key: "customerPartNo" },
+    { 
+      title: "Qty Plan", 
+      dataIndex: "qtyPlan", 
+      key: "qtyPlan",
+      render: (q: number) => <span className="font-medium text-green-700">{q}</span>
+    },
+    { 
+      title: "Qty Actual", 
+      key: "qtyActual",
+      render: (_: any, record: PackingEntry) => {
+        if (editingEntryId === record.id) {
+          return (
+            <Input 
+              type="number"
+              value={editedEntry.qtyActualPacking || 0}
+              onChange={(e) => setEditedEntry({...editedEntry, qtyActualPacking: Number(e.target.value)})}
+              className="w-20"
+            />
+          );
+        }
+        return <span className="font-medium text-green-800">{record.qtyActualPacking}</span>;
+      }
+    },
+    { title: "PIC1", key: "pic1", render: (_: any, record: PackingEntry) => record.pic1?.name || "-" },
+    { title: "PIC2", key: "pic2", render: (_: any, record: PackingEntry) => record.pic2?.name || "-" },
+    { title: "PIC3", key: "pic3", render: (_: any, record: PackingEntry) => record.pic3?.name || "-" },
+    { 
+      title: "Balance", 
+      key: "balance",
+      render: (_: any, record: PackingEntry) => (
+        <span className="font-medium text-red-500">{record.qtyPlan - record.qtyActualPacking}</span>
+      )
+    },
+    { title: "Type", dataIndex: "type", key: "type" },
+    { 
+      title: "Status", 
+      dataIndex: "status", 
+      key: "status",
+      render: (status: string) => {
+        if (status === "APPROVED") return <Tag color="success">Approved</Tag>;
+        if (status === "REJECTED") return <Tag color="error">Rejected</Tag>;
+        return <Tag color="warning">Pending</Tag>;
+      }
+    },
+    {
+      title: "Actions",
+      key: "actions",
+      fixed: "right",
+      render: (_: any, record: PackingEntry) => {
+        const isActionDisabled = actionLoadingId === record.id || record.status === "APPROVED";
+        if (editingEntryId === record.id) {
+          return (
+            <Space>
+              <Button type="primary" size="small" onClick={saveEditedEntry}>Save</Button>
+              <Button size="small" onClick={() => setEditingEntryId(null)}>Cancel</Button>
+            </Space>
+          );
+        }
+        return (
+          <Space>
+            <Button size="small" type="dashed" icon={<FiEdit />} onClick={() => startEditing(record)} />
+            <Button size="small" type="primary" icon={<Check size={14} />} disabled={isActionDisabled} onClick={() => updateStatus(record.id, "APPROVED")} />
+            <Button size="small" danger type="primary" icon={<X size={14} />} disabled={actionLoadingId === record.id || record.status === "REJECTED"} onClick={() => updateStatus(record.id, "REJECTED")} />
+            <Popconfirm title="Delete entry?" onConfirm={() => handleDeleteEntry(record.id)}>
+              <Button size="small" danger type="text" icon={<Trash size={14} />} />
+            </Popconfirm>
+          </Space>
+        );
+      }
+    }
+  ];
 
   return (
-    <div className="p-6 max-w-full">
-      <h1 className="text-3xl font-extrabold text-gray-800 mb-6 flex items-center gap-2">
-        <FiPackage className="text-blue-600" />
-        Packing Reports
-      </h1>
-      {/* <button
-        type="button"
-        onClick={fetchData}
-        disabled={loading}
-        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition duration-150
-  font-medium shadow-md border text-sm
-  ${loading
-            ? 'bg-gray-200 text-gray-500 cursor-not-allowed animate-pulse'
-            : 'bg-white hover:bg-blue-50 border-blue-300 text-blue-700'}
-`}
+    <div className="w-full">
+      <ModernTable
+        title="Packing Reports"
+        icon={<FiPackage size={24} className="text-blue-600" />}
+        filterControls={
+          <Space wrap>
+            <DatePicker 
+              placeholder="Filter Tanggal" 
+              onChange={(date, dateString) => setSelectedDate(Array.isArray(dateString) ? dateString[0] : dateString)} 
+              allowClear 
+            />
+            <Select value={selectedType} onChange={setSelectedType} style={{ width: 120 }}>
+              <Select.Option value="ALL">ALL</Select.Option>
+              <Select.Option value="2R">2R</Select.Option>
+              <Select.Option value="4R">4R</Select.Option>
+            </Select>
+            <Input 
+              placeholder="Cari PRID..." 
+              prefix={<FiSearch />} 
+              value={searchPRID} 
+              onChange={(e) => setSearchPRID(e.target.value)} 
+              allowClear 
+            />
+          </Space>
+        }
+        extraActions={
+          <Button type="primary" icon={<FiFileText />} onClick={() => setShowExportModal(true)}>
+            Export ke Excel
+          </Button>
+        }
+        columns={columns}
+        dataSource={filtered}
+        rowKey="id"
+        loading={loading}
+        scroll={{ x: 2000 }}
+      />
+
+      <Modal
+        title="Export Packing Report"
+        open={showExportModal}
+        onCancel={() => setShowExportModal(false)}
+        onOk={handleExportToExcel}
+        okText="Export"
+        cancelText="Batal"
       >
-        <FiRefreshCw
-          className={`text-lg transition-transform duration-300 
-      ${loading ? 'animate-spin scale-110' : 'hover:rotate-90'}
-    `}
-        />
-        <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
-      </button> */}
-
-      {/* Filter Controls */}
-      <div className="flex flex-wrap items-end gap-6 bg-white p-4 rounded-xl shadow-md border border-gray-200 mb-6">
-        <div>
-          <label className="text-sm font-semibold text-gray-700 mb-1 flex items-center gap-1">
-            <FiCalendar className="text-gray-600" />
-            Filter Tanggal:
-          </label>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-          />
-        </div>
-        <div>
-          <label className="text-sm font-semibold text-gray-700 mb-1 flex items-center gap-1">
-            <FiFileText className="text-gray-600" />
-            Filter Type:
-          </label>
-          <select
-            value={selectedType}
-            onChange={(e) => setSelectedType(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-          >
-            <option value="ALL">ALL</option>
-            <option value="2R">2R</option>
-            <option value="4R">4R</option>
-          </select>
-        </div>
-        <div className="ml-auto">
-          <button
-            type="button"
-            onClick={handleExportToExcel}
-            className="bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white text-sm font-medium px-5 py-2 rounded-lg shadow-md transition duration-150 flex items-center gap-2"
-          >
-            <FiFileText /> Export ke Excel
-          </button>
-        </div>
-      </div>
-
-      {/* Error Alert */}
-      {error && (
-        <div className="mb-4 p-4 rounded-lg bg-red-50 border border-red-300 text-red-700 font-medium shadow-sm">
-          ❌ {error}
-        </div>
-      )}
-
-      {/* Loading & Table */}
-
-      <div className="overflow-x-auto rounded-xl border border-gray-300 shadow-xl">
-        <table className="min-w-[1200px] w-full text-base text-gray-800">
-          <thead className="bg-blue-100 text-sm text-gray-700 font-semibold uppercase tracking-wide sticky top-0 z-10">
-            <tr>
-              {[
-                "No",
-                "Tanggal Packing",
-                "Line No",
-                "Jam Mulai",
-                "Jam Selesai",
-                "Menit",
-                "Packing Req No (PRID)",
-                "Explanner No",
-                "Customer Part No",
-                "Qty Plan",
-                "Qty Actual",
-                "PIC1",
-                "PIC2",
-                "PIC3",
-                "Balance",
-                "Type",
-                "Status",
-                "Actions",
-              ].map((title, idx) => (
-                <th
-                  key={idx}
-                  className="px-2 py-1 text-center whitespace-nowrap relative"
-                  onClick={() => {
-                    if (title.includes("PRID"))
-                      setShowPRIDSearch((prev) => !prev);
-                  }}
-                >
-                  <div className="flex justify-center items-center gap-1 cursor-pointer">
-                    {title}
-                    {title.includes("PRID") && (
-                      <span className="text-blue-500 text-xs">🔍</span>
-                    )}
-                  </div>
-                  {/* Popover Search Box */}
-                  {title.includes("PRID") && showPRIDSearch && (
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 bg-white shadow-md border border-gray-300 rounded-md z-20 p-2">
-                      <input
-                        type="text"
-                        placeholder="Cari PRID..."
-                        className="text-xs px-2 py-1 border border-gray-300 rounded w-40 focus:ring-1 focus:ring-blue-400 focus:outline-none"
-                        value={searchPRID}
-                        onChange={(e) => setSearchPRID(e.target.value)}
-                        autoFocus
-                      />
-                    </div>
-                  )}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {filtered.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={18}
-                  className="text-center py-6 italic text-gray-400"
-                >
-                  Tidak ada data ditemukan.
-                </td>
-              </tr>
-            ) : (
-              paginatedData.map((entry, index) => {
-                const isActionDisabled =
-                  actionLoadingId === entry.id || entry.status === "APPROVED";
-
-                return (
-                  <tr
-                    key={entry.id}
-                    className="odd:bg-white even:bg-gray-50 hover:bg-blue-50 transition"
-                  >
-                    <td className="px-2 py-1 text-center font-semibold">
-                      {(currentPage - 1) * itemsPerPage + index + 1}
-                    </td>
-                    <td className="px-2 py-1 text-center">
-                      {new Date(entry.tanggalPacking).toLocaleDateString()}
-                    </td>
-                    <td className="px-2 py-1 text-center">{entry.lineNo}</td>
-                    <td className="px-2 py-1 text-center">{entry.jamMulai}</td>
-                    <td className="px-2 py-1 text-center">
-                      {entry.jamSelesai}
-                    </td>
-                    <td className="px-2 py-1 text-center">
-                      {entry.menitPacking}
-                    </td>
-                    <td className="px-2 py-1 text-center font-medium text-blue-800">
-                      {entry.Incoming2r?.prId ||
-                        entry.Incoming4r?.prId ||
-                        entry.packingReqNo}
-                    </td>
-                    <td className="px-2 py-1 text-center">
-                      {entry.explannerNo}
-                    </td>
-                    <td className="px-2 py-1 text-center">
-                      {entry.customerPartNo}
-                    </td>
-                    <td className="px-2 py-1 text-center font-medium text-green-700">
-                      {entry.qtyPlan}
-                    </td>
-                    <td className="px-2 py-1 text-center">
-                      {editingEntryId === entry.id ? (
-                        <input
-                          type="number"
-                          value={editedEntry.qtyActualPacking || 0}
-                          onChange={(e) =>
-                            setEditedEntry({
-                              ...editedEntry,
-                              qtyActualPacking: Number(e.target.value),
-                            })
-                          }
-                          className="w-20 border border-gray-300 rounded px-2 py-1 text-sm text-center"
-                        />
-                      ) : (
-                        <span className="font-medium text-green-800">
-                          {entry.qtyActualPacking}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-2 py-1 text-center">
-                      {entry.pic1?.name || "-"}
-                    </td>
-                    <td className="px-2 py-1 text-center">
-                      {entry.pic2?.name || "-"}
-                    </td>
-                    <td className="px-2 py-1 text-center">
-                      {entry.pic3?.name || "-"}
-                    </td>
-                    <td className="px-2 py-1 text-center font-medium text-red-500">
-                      {entry.qtyPlan - entry.qtyActualPacking}
-                    </td>
-                    <td className="px-2 py-1 text-center">{entry.type}</td>
-                    <td className="px-2 py-1 text-center">
-                      {statusBadge(entry.status)}
-                    </td>
-                    <td className="px-2 py-1 text-center">
-                      <div className="flex justify-center space-x-2">
-                        {editingEntryId === entry.id ? (
-                          <>
-                            <button
-                              type="button"
-                              onClick={saveEditedEntry}
-                              className="px-3 py-1.5 rounded-md text-xs bg-blue-600 text-white hover:bg-blue-700"
-                            >
-                              Save
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setEditingEntryId(null)}
-                              className="px-3 py-1.5 rounded-md text-xs bg-gray-300 text-gray-800 hover:bg-gray-400"
-                            >
-                              Cancel
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => startEditing(entry)}
-                              className="px-3 py-1.5 rounded-md text-xs bg-yellow-500 text-white hover:bg-yellow-600 flex items-center gap-1"
-                            >
-                              <FiEdit size={14} /> Edit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => updateStatus(entry.id, "APPROVED")}
-                              disabled={isActionDisabled}
-                              className={`px-3 py-1.5 rounded-md text-xs text-white flex items-center gap-1 ${isActionDisabled ? "bg-green-300 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"}`}
-                            >
-                              <Check size={14} /> Approve
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => updateStatus(entry.id, "REJECTED")}
-                              disabled={
-                                actionLoadingId === entry.id ||
-                                entry.status === "REJECTED"
-                              }
-                              className={`px-3 py-1.5 rounded-md text-xs text-white flex items-center gap-1 ${entry.status === "REJECTED" ? "bg-red-300 cursor-not-allowed" : "bg-red-600 hover:bg-red-700"}`}
-                            >
-                              <X size={14} /> Reject
-                            </button>
-                          </>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteEntry(entry.id)}
-                          className="px-3 py-1.5 rounded-md text-xs text-white bg-red-500 hover:bg-red-600 flex items-center gap-1"
-                        >
-                          <Trash size={14} /> Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-        {/* Pagination Controls */}
-        <div className="mt-8 px-4 md:px-8 w-full flex flex-col md:flex-row items-center justify-between gap-6">
-          {/* Kiri: Jumlah item per halaman */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">Tampilkan</span>
-            <select
-              value={itemsPerPage}
-              onChange={(e) => {
-                setCurrentPage(1);
-                setItemsPerPage(Number(e.target.value));
+        <div className="flex flex-col gap-4 mt-4">
+          <p className="text-sm text-gray-600 m-0">
+            Pilih rentang waktu untuk mengekspor data laporan packing. Jika tidak memilih waktu, semua data yang tampil di tabel saat ini akan diekspor.
+          </p>
+          <div>
+            <label className="text-sm font-semibold text-gray-700 mb-1 flex items-center gap-1">
+              Rentang Tanggal & Jam:
+            </label>
+            <DatePicker.RangePicker 
+              showTime 
+              format="YYYY-MM-DD HH:mm" 
+              className="w-full"
+              onChange={(dates) => {
+                setExportStart(dates?.[0] || null);
+                setExportEnd(dates?.[1] || null);
               }}
-              className="border border-gray-300 rounded px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-            >
-              {[10, 20, 50, 100].map((size) => (
-                <option key={size} value={size}>
-                  {size} / page
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Kanan: Pagination buttons */}
-          <div className="flex items-center justify-center flex-wrap gap-1">
-            {/* Tombol Prev */}
-            <button
-              type="button"
-              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-              disabled={currentPage === 1}
-              className={`px-3 py-1.5 rounded border text-sm font-medium ${
-                currentPage === 1
-                  ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                  : "bg-white border-gray-300 text-blue-600 hover:bg-blue-50"
-              }`}
-            >
-              &lt;
-            </button>
-
-            {/* Nomor Halaman */}
-            {[...Array(totalPages)].map((_, idx) => {
-              const page = idx + 1;
-              if (
-                page === 1 ||
-                page === totalPages ||
-                (page >= currentPage - 1 && page <= currentPage + 1)
-              ) {
-                return (
-                  <button
-                    type="button"
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-1.5 rounded border text-sm font-medium ${
-                      currentPage === page
-                        ? "bg-blue-600 text-white"
-                        : "bg-white border-gray-300 text-blue-600 hover:bg-blue-50"
-                    }`}
-                  >
-                    {page}
-                  </button>
-                );
-              } else if (
-                (page === currentPage - 2 && page !== 2) ||
-                (page === currentPage + 2 && page !== totalPages - 1)
-              ) {
-                return (
-                  <span key={page} className="px-2 text-gray-400">
-                    ...
-                  </span>
-                );
-              }
-              return null;
-            })}
-
-            {/* Tombol Next */}
-            <button
-              type="button"
-              onClick={() =>
-                setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-              }
-              disabled={currentPage === totalPages}
-              className={`px-3 py-1.5 rounded border text-sm font-medium ${
-                currentPage === totalPages
-                  ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                  : "bg-white border-gray-300 text-blue-600 hover:bg-blue-50"
-              }`}
-            >
-              &gt;
-            </button>
+            />
           </div>
         </div>
-      </div>
+      </Modal>
     </div>
   );
 }

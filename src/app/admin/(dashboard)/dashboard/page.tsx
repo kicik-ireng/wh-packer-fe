@@ -1,6 +1,13 @@
 "use client";
 
-import { ClipboardList, Users, AlertTriangle, PackagePlus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Row, Col, Card, Statistic, Spin } from "antd";
+import {
+  TeamOutlined,
+  FileDoneOutlined,
+  ExclamationCircleOutlined,
+  DownloadOutlined
+} from "@ant-design/icons";
 import {
   LineChart,
   Line,
@@ -14,35 +21,11 @@ import {
   Cell,
   Legend,
 } from "recharts";
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-
-function StatCard({
-  title,
-  value,
-  icon,
-}: {
-  title: string;
-  value: number;
-  icon: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-4 rounded-xl border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-5 shadow-sm hover:shadow-md transition duration-200">
-      <div className="text-blue-600 dark:text-blue-400 text-3xl">{icon}</div>
-      <div>
-        <p className="text-sm font-medium text-gray-500 dark:text-neutral-400 tracking-wide">
-          {title}
-        </p>
-        <p className="text-2xl font-bold text-gray-800 dark:text-white leading-tight">
-          {value}
-        </p>
-      </div>
-    </div>
-  );
-}
 
 export default function AdminDashboardPage() {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     manpower: 0,
     reports: 0,
@@ -51,38 +34,14 @@ export default function AdminDashboardPage() {
     incoming4R: 0,
   });
 
-  const [chartData, setChartData] = useState<
-    { name: string; approved: number }[]
-  >([]);
-  const [dailyChartData, setDailyChartData] = useState<
-    { date: string; approved: number }[]
-  >([]);
-  const [approvalPieData, setApprovalPieData] = useState<
-    { name: string; value: number }[]
-  >([]);
+  const [chartData, setChartData] = useState<{ name: string; approved: number }[]>([]);
+  const [dailyChartData, setDailyChartData] = useState<{ date: string; approved: number }[]>([]);
+  const [approvalPieData, setApprovalPieData] = useState<{ name: string; value: number }[]>([]);
+
+  const COLORS = ["#10b981", "#f59e0b", "#ef4444"]; // Green, Yellow, Red
 
   useEffect(() => {
-    const verifyLogin = async () => {
-      try {
-        const res = await fetch("http://10.10.10.5:3001/auth/verify", {
-          method: "POST",
-          credentials: "include",
-        });
-
-        if (!res.ok) {
-          router.replace("/admin/login");
-        }
-      } catch (error) {
-        console.error("Verifikasi login gagal", error);
-        router.replace("/admin/login");
-      }
-    };
-
-    verifyLogin();
-  }, [router]);
-
-  useEffect(() => {
-    const fetchData = async () => {
+    async function loadData() {
       try {
         const [
           manpowerRes,
@@ -91,19 +50,11 @@ export default function AdminDashboardPage() {
           incoming2RRes,
           incoming4RRes,
         ] = await Promise.all([
-          fetch("http://10.10.10.5:3001/manpower", { credentials: "include" }),
-          fetch("http://10.10.10.5:3001/packing-report", {
-            credentials: "include",
-          }),
-          fetch("http://10.10.10.5:3001/production-problem", {
-            credentials: "include",
-          }),
-          fetch("http://10.10.10.5:3001/incoming2r", {
-            credentials: "include",
-          }),
-          fetch("http://10.10.10.5:3001/incoming4r", {
-            credentials: "include",
-          }),
+          fetch("http://localhost:3001/manpower", { credentials: "include" }),
+          fetch("http://localhost:3001/packing-report", { credentials: "include" }),
+          fetch("http://localhost:3001/production-problem", { credentials: "include" }),
+          fetch("http://localhost:3001/incoming2r", { credentials: "include" }),
+          fetch("http://localhost:3001/incoming4r", { credentials: "include" }),
         ]);
 
         const manpowerData = await manpowerRes.json();
@@ -116,22 +67,22 @@ export default function AdminDashboardPage() {
           (report.entries || []).map((entry: any) => ({
             ...entry,
             tanggalPacking: report.tanggalPacking,
-          })),
+          }))
         );
 
         setStats({
-          manpower: manpowerData.length,
-          reports: allEntries.length,
-          problems: problemsData.length,
-          incoming2R: incoming2RData.length,
-          incoming4R: incoming4RData.length,
+          manpower: manpowerData.length || 0,
+          reports: allEntries.length || 0,
+          problems: problemsData.length || 0,
+          incoming2R: incoming2RData.length || 0,
+          incoming4R: incoming4RData.length || 0,
         });
 
+        // Chart calculations
         const monthly = Array(12).fill(0);
         let approvedCount = 0;
         let pendingCount = 0;
         let rejectedCount = 0;
-
         const dailyMap = new Map<string, number>();
 
         allEntries.forEach((entry: any) => {
@@ -150,175 +101,140 @@ export default function AdminDashboardPage() {
           if (entry.status === "REJECTED") rejectedCount++;
         });
 
-        const monthNames = [
-          "Jan",
-          "Feb",
-          "Mar",
-          "Apr",
-          "Mei",
-          "Jun",
-          "Jul",
-          "Agu",
-          "Sep",
-          "Okt",
-          "Nov",
-          "Des",
-        ];
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"];
+        setChartData(monthly.map((val, idx) => ({ name: monthNames[idx], approved: val })));
 
-        setChartData(
-          monthNames.map((name, i) => ({
-            name,
-            approved: monthly[i],
-          })),
-        );
+        const sortedDaily = Array.from(dailyMap.entries())
+          .sort(([a], [b]) => a.localeCompare(b))
+          .slice(-14)
+          .map(([date, count]) => ({
+            date: new Date(date).toLocaleDateString("id-ID", { day: "numeric", month: "short" }),
+            approved: count,
+          }));
+        setDailyChartData(sortedDaily);
 
         setApprovalPieData([
-          { name: "APPROVED", value: approvedCount },
-          { name: "PENDING", value: pendingCount },
-          { name: "REJECTED", value: rejectedCount },
+          { name: "Approved", value: approvedCount },
+          { name: "Pending", value: pendingCount },
+          { name: "Rejected", value: rejectedCount },
         ]);
 
-        const today = new Date();
-        const dates = [...dailyMap.keys()].map((d) => new Date(d));
-        const minDate = new Date(Math.min(...dates.map((d) => d.getTime())));
-        const maxDate = new Date(Math.max(...dates.map((d) => d.getTime())));
-        const endDate = new Date(Math.max(maxDate.getTime(), today.getTime()));
-        endDate.setDate(endDate.getDate() + 7);
-
-        const fillDateMap = new Map<string, number>();
-        for (
-          let d = new Date(minDate);
-          d <= endDate;
-          d.setDate(d.getDate() + 1)
-        ) {
-          const key = d.toISOString().split("T")[0];
-          fillDateMap.set(key, dailyMap.get(key) || 0);
-        }
-
-        const sortedDaily = Array.from(fillDateMap.entries())
-          .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
-          .map(([date, approved]) => ({ date, approved }));
-
-        setDailyChartData(sortedDaily);
-      } catch (err) {
-        console.error("Gagal mengambil data dashboard:", err);
+      } catch (error) {
+        console.error("Gagal load data dashboard:", error);
+      } finally {
+        setLoading(false);
       }
-    };
+    }
 
-    fetchData();
-    const interval = setInterval(fetchData, 10000);
-    return () => clearInterval(interval);
+    loadData();
   }, []);
 
-  const COLORS = ["#22c55e", "#facc15", "#ef4444"]; // Hijau, kuning, merah
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center min-h-[60vh]">
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
-        <StatCard
-          title="Manpower"
-          value={stats.manpower}
-          icon={<Users className="h-5 w-5" />}
-        />
-        <StatCard
-          title="Reports"
-          value={stats.reports}
-          icon={<ClipboardList className="h-5 w-5" />}
-        />
-        <StatCard
-          title="Problems"
-          value={stats.problems}
-          icon={<AlertTriangle className="h-5 w-5" />}
-        />
-        <StatCard
-          title="Incoming 2R"
-          value={stats.incoming2R}
-          icon={<PackagePlus className="h-5 w-5" />}
-        />
-        <StatCard
-          title="Incoming 4R"
-          value={stats.incoming4R}
-          icon={<PackagePlus className="h-5 w-5" />}
-        />
+      <div>
+        <h1 className="text-2xl font-bold text-gray-800 m-0">Dashboard Overview</h1>
+        <p className="text-gray-500">Welcome to the Admin Portal. Here is your system summary.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="rounded-xl border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-5 shadow-sm hover:shadow-md transition duration-200">
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
-            Approved Reports per Month
-          </h2>
-          <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis allowDecimals={false} />
-                <Tooltip />
-                <Line
-                  type="monotone"
-                  dataKey="approved"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                  activeDot={{ r: 5 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+      <Row gutter={[16, 16]}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card bordered={false} className="shadow-sm">
+            <Statistic
+              title="Total Manpower"
+              value={stats.manpower}
+              prefix={<TeamOutlined className="text-blue-500" />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card bordered={false} className="shadow-sm">
+            <Statistic
+              title="Total Packing Entries"
+              value={stats.reports}
+              prefix={<FileDoneOutlined className="text-green-500" />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card bordered={false} className="shadow-sm">
+            <Statistic
+              title="Production Problems"
+              value={stats.problems}
+              prefix={<ExclamationCircleOutlined className="text-red-500" />}
+              valueStyle={{ color: '#cf1322' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card bordered={false} className="shadow-sm">
+            <Statistic
+              title="Total Incoming (2R & 4R)"
+              value={stats.incoming2R + stats.incoming4R}
+              prefix={<DownloadOutlined className="text-purple-500" />}
+            />
+          </Card>
+        </Col>
+      </Row>
 
-        <div className="rounded-xl border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-5 shadow-sm hover:shadow-md transition duration-200">
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
-            Packing Report Approval Status
-          </h2>
-          <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={approvalPieData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={3}
-                  dataKey="value"
-                  label
-                >
-                  {approvalPieData.map((_, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
-                    />
-                  ))}
-                </Pie>
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-5 shadow-sm hover:shadow-md transition duration-200">
-        <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
-          Approved Reports per Day (7 Hari ke Depan)
-        </h2>
-        <div className="h-72 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={dailyChartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis allowDecimals={false} />
-              <Tooltip />
-              <Line
-                type="monotone"
-                dataKey="approved"
-                stroke="#10b981"
-                strokeWidth={2}
-                activeDot={{ r: 5 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={16}>
+          <Card title="Tren Packing APPROVED (14 Hari Terakhir)" bordered={false} className="shadow-sm h-full">
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={dailyChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="date" tick={{ fill: "#888" }} />
+                  <YAxis tick={{ fill: "#888" }} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="approved"
+                    stroke="#3b82f6"
+                    strokeWidth={3}
+                    dot={{ r: 4, fill: "#3b82f6", strokeWidth: 2 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} lg={8}>
+          <Card title="Status Approval Packing" bordered={false} className="shadow-sm h-full">
+            <div className="h-[300px] flex items-center justify-center">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={approvalPieData}
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {approvalPieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Legend verticalAlign="bottom" height={36} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </Col>
+      </Row>
     </div>
   );
 }

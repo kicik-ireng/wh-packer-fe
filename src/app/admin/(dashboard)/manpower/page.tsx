@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Pencil, Trash2, PlusCircle, Save, X, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { FiRefreshCw } from "react-icons/fi";
 import { FiUsers } from "react-icons/fi";
+import { PlusCircle, Pencil, Trash2, Printer } from "lucide-react";
+import { Button, Modal, Form, Input, Space, Popconfirm, message, QRCode } from "antd";
+import ModernTable from "@/src/app/components/ModernTable";
 
 interface Manpower {
   id: number;
@@ -13,14 +14,17 @@ interface Manpower {
 }
 
 export default function ManpowerPage() {
-  const [manpowerList, setManpowerList] = useState<Manpower[]>([]);
+  const [data, setData] = useState<Manpower[]>([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({ id: 0, name: "", nik: "" });
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
-
+  const [formData, setFormData] = useState<Manpower>({ id: 0, name: "", nik: "" });
+  const [form] = Form.useForm();
   const router = useRouter();
+
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [selectedRows, setSelectedRows] = useState<Manpower[]>([]);
+  const [showPrintModal, setShowPrintModal] = useState(false);
+
   useEffect(() => {
     fetchManpower();
   }, []);
@@ -28,259 +32,254 @@ export default function ManpowerPage() {
   const fetchManpower = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://10.10.10.5:3001/manpower", {
+      const res = await fetch("http://localhost:3001/manpower", {
         credentials: "include",
       });
-      const data = await res.json();
-      setManpowerList(data);
+      const json = await res.json();
+      setData(json);
     } catch (err) {
-      console.error("Gagal mengambil data:", err);
+      message.error("Gagal mengambil data manpower");
     }
     setLoading(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async (values: any) => {
     const method = formData.id ? "PATCH" : "POST";
     const url = formData.id
-      ? `http://10.10.10.5:3001/manpower/${formData.id}`
-      : `http://10.10.10.5:3001/manpower`;
+      ? `http://localhost:3001/manpower/${formData.id}`
+      : `http://localhost:3001/manpower`;
 
-    const res = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ name: formData.name, nik: formData.nik }),
-    });
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(values),
+      });
 
-    if (res.ok) {
-      setFormData({ id: 0, name: "", nik: "" });
-      setShowForm(false);
-      fetchManpower();
+      if (res.ok) {
+        message.success("Manpower saved successfully");
+        setShowForm(false);
+        fetchManpower();
+      } else {
+        message.error("Failed to save manpower");
+      }
+    } catch (error) {
+      message.error("An error occurred");
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Yakin ingin hapus?")) return;
-    await fetch(`http://10.10.10.5:3001/manpower/${id}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
-    fetchManpower();
+    try {
+      await fetch(`http://localhost:3001/manpower/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      message.success("Manpower deleted");
+      fetchManpower();
+    } catch (err) {
+      message.error("Failed to delete manpower");
+    }
   };
 
   const openEdit = (item: Manpower) => {
     setFormData(item);
+    form.setFieldsValue(item);
     setShowForm(true);
   };
-  // 🔒
-  useEffect(() => {
-    const verifyLogin = async () => {
-      try {
-        const res = await fetch("http://10.10.10.5:3001/auth/verify", {
-          method: "POST",
-          credentials: "include",
-        });
 
-        if (!res.ok) {
-          router.replace("/admin/login");
-        }
-      } catch (error) {
-        console.error("Verifikasi login gagal", error);
-        router.replace("/admin/login");
-      }
-    };
+  const columns: any = [
+    {
+      title: "NIK",
+      dataIndex: "nik",
+      key: "nik",
+    },
+    {
+      title: "Nama",
+      dataIndex: "name",
+      key: "name",
+    },
+    {
+      title: "Aksi",
+      key: "action",
+      width: 150,
+      disableSearch: true,
+      render: (_: any, record: Manpower) => (
+        <Space>
+          <Button 
+            type="text" 
+            icon={<Pencil size={14} className="text-blue-500" />} 
+            onClick={() => openEdit(record)}
+          />
+          <Popconfirm
+            title="Hapus manpower ini?"
+            onConfirm={() => handleDelete(record.id)}
+            okText="Ya"
+            cancelText="Batal"
+          >
+            <Button type="text" danger icon={<Trash2 size={14} />} />
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
 
-    verifyLogin();
-  }, [router]);
+  const printData = selectedRows.length > 0 ? selectedRows : data;
 
-  const totalPages = Math.ceil(manpowerList.length / itemsPerPage);
-
-  const paginatedData = manpowerList.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage,
-  );
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [manpowerList]);
+  const handlePrint = () => {
+    window.print();
+  };
 
   return (
-    <div className="p-6 max-w-full space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-extrabold text-gray-800 flex items-center gap-2">
-          <FiUsers className="text-blue-600" />
-          Manpower Management
-        </h1>
-        <button
-          onClick={() => {
-            setFormData({ id: 0, name: "", nik: "" });
-            setShowForm(true);
-          }}
-          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 shadow-sm transition"
-        >
-          <PlusCircle size={18} /> Tambah
-        </button>
-      </div>
+    <div className="w-full relative">
+      <style>
+        {`
+          @media print {
+            body * {
+              visibility: hidden !important;
+            }
+            #print-area, #print-area * {
+              visibility: visible !important;
+            }
+            #print-area {
+              position: absolute !important;
+              left: 0 !important;
+              top: 0 !important;
+              margin: 0 !important;
+              padding: 10mm !important;
+              width: 100% !important;
+              background-color: white !important;
+            }
+            .ant-modal-close, .ant-modal-footer, .ant-modal-header {
+              display: none !important;
+            }
+          }
+        `}
+      </style>
 
-      {/* Table */}
-      <div className="overflow-x-auto">
-        <div className="inline-block min-w-full align-middle">
-          <div className="overflow-hidden rounded-xl border border-gray-300 shadow-xl">
-            <table className="min-w-[600px] w-full text-sm text-gray-800">
-              <thead className="bg-blue-50 text-sm text-gray-700 font-semibold uppercase tracking-wide">
-                <tr>
-                  {["No", "NIK", "Nama", "Aksi"].map((header, idx) => (
-                    <th
-                      key={idx}
-                      className="px-4 py-3 text-center border-b border-gray-300 whitespace-nowrap"
-                    >
-                      {header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
-                {loading ? (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="text-center py-6 text-gray-400 italic"
-                    >
-                      <Loader2 className="animate-spin mx-auto" size={20} />
-                    </td>
-                  </tr>
-                ) : manpowerList.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="text-center py-6 text-gray-400 italic"
-                    >
-                      Tidak ada data.
-                    </td>
-                  </tr>
-                ) : (
-                  paginatedData.map((mp, idx) => (
-                    <tr key={mp.id} className="hover:bg-blue-50 transition">
-                      <td className="px-4 py-2 text-center font-medium">
-                        {(currentPage - 1) * itemsPerPage + idx + 1}
-                      </td>
-                      <td className="px-4 py-2 text-center">{mp.nik}</td>
-                      <td className="px-4 py-2 text-center">{mp.name}</td>
-                      <td className="px-4 py-2 text-center">
-                        <div className="inline-flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => openEdit(mp)}
-                            className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-xs font-medium"
-                          >
-                            <Pencil size={14} /> Edit
-                          </button>
-                          <span className="h-4 w-px bg-gray-300" />
-                          <button
-                            onClick={() => handleDelete(mp.id)}
-                            className="inline-flex items-center gap-1 text-red-500 hover:text-red-700 text-xs font-medium"
-                          >
-                            <Trash2 size={14} /> Hapus
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex justify-between items-center px-4 py-3 bg-gray-50 border-t">
-            <p className="text-xs text-gray-600">
-              Halaman {currentPage} dari {totalPages}
-            </p>
-            <div className="flex gap-2">
-              <button
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                className={`px-3 py-1 rounded border text-sm ${
-                  currentPage === 1
-                    ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                    : "hover:bg-gray-100"
-                }`}
-              >
-                Sebelumnya
-              </button>
-              <button
-                disabled={currentPage === totalPages}
-                onClick={() =>
-                  setCurrentPage((p) => Math.min(p + 1, totalPages))
-                }
-                className={`px-3 py-1 rounded border text-sm ${
-                  currentPage === totalPages
-                    ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                    : "hover:bg-gray-100"
-                }`}
-              >
-                Selanjutnya
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ModernTable
+        title="Manpower Management"
+        icon={<FiUsers size={24} className="text-blue-600" />}
+        extraActions={
+          <Space>
+            <Button
+              type="default"
+              icon={<Printer size={16} className="text-gray-700" />}
+              onClick={() => setShowPrintModal(true)}
+            >
+              {selectedRows.length > 0 ? `Print ID (${selectedRows.length})` : "Print All ID"}
+            </Button>
+            <Button
+              type="primary"
+              icon={<PlusCircle size={16} />}
+              onClick={() => {
+                setFormData({ id: 0, name: "", nik: "" });
+                form.resetFields();
+                setShowForm(true);
+              }}
+            >
+              Tambah Manpower
+            </Button>
+          </Space>
+        }
+        columns={columns}
+        dataSource={data}
+        rowKey="id"
+        loading={loading}
+        rowSelection={{
+          selectedRowKeys,
+          onChange: (newSelectedRowKeys: React.Key[], newSelectedRows: Manpower[]) => {
+            setSelectedRowKeys(newSelectedRowKeys);
+            setSelectedRows(newSelectedRows);
+          },
+        }}
+      />
 
-      {/* Form Modal */}
-      {showForm && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center">
-          <form
-            onSubmit={handleSubmit}
-            className="bg-white dark:bg-neutral-800 p-6 rounded-xl shadow-xl space-y-4 w-full max-w-md"
+      {/* Modal Add/Edit */}
+      <Modal
+        title={formData.id ? "Edit Manpower" : "Tambah Manpower"}
+        open={showForm}
+        onCancel={() => setShowForm(false)}
+        footer={null}
+      >
+        <Form form={form} layout="vertical" onFinish={handleSave}>
+          <Form.Item
+            name="nik"
+            label="NIK"
+            rules={[{ required: true, message: "NIK wajib diisi" }]}
           >
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
-              {formData.id ? "Edit Manpower" : "Tambah Manpower"}
-            </h2>
-            <div>
-              <label className="block text-sm text-gray-600 dark:text-gray-300">
-                NIK
-              </label>
-              <input
-                type="text"
-                className="mt-1 w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={formData.nik}
-                onChange={(e) =>
-                  setFormData({ ...formData, nik: e.target.value })
-                }
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-600 dark:text-gray-300">
-                Nama
-              </label>
-              <input
-                type="text"
-                className="mt-1 w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                required
-              />
-            </div>
-            <div className="flex justify-end gap-2 pt-4">
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 rounded text-gray-600 hover:bg-gray-100"
+            <Input placeholder="Masukkan NIK" />
+          </Form.Item>
+          <Form.Item
+            name="name"
+            label="Nama"
+            rules={[{ required: true, message: "Nama wajib diisi" }]}
+          >
+            <Input placeholder="Masukkan Nama" />
+          </Form.Item>
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => setShowForm(false)}>Batal</Button>
+            <Button type="primary" htmlType="submit">
+              Simpan
+            </Button>
+          </div>
+        </Form>
+      </Modal>
+
+      {/* Modal Print ID Card */}
+      <Modal
+        title={selectedRows.length > 0 ? "Print Selected ID Cards" : "Print All ID Cards"}
+        open={showPrintModal}
+        onCancel={() => setShowPrintModal(false)}
+        width={800}
+        footer={[
+          <Button key="cancel" onClick={() => setShowPrintModal(false)}>
+            Batal
+          </Button>,
+          <Button key="print" type="primary" icon={<Printer size={16} />} onClick={handlePrint}>
+            Cetak Sekarang
+          </Button>,
+        ]}
+      >
+        <div className="max-h-[60vh] overflow-y-auto bg-gray-100 p-4 rounded-lg">
+          <div id="print-area" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 54mm)', gap: '10mm', justifyContent: 'center' }}>
+            {printData.map((mp) => (
+              <div 
+                key={mp.id} 
+                style={{ 
+                  width: '54mm', 
+                  height: '86mm', 
+                  border: '1px solid #d9d9d9', 
+                  borderRadius: '12px', 
+                  padding: '16px', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  backgroundColor: '#ffffff',
+                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                  breakInside: 'avoid'
+                }}
               >
-                <X size={16} /> Batal
-              </button>
-              <button
-                type="submit"
-                className="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
-                <Save size={16} /> Simpan
-              </button>
-            </div>
-          </form>
+                {/* QR Code */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', padding: '8px', borderRadius: '8px', marginBottom: '16px' }}>
+                  <QRCode value={mp.nik} size={130} bordered={false} errorLevel="H" />
+                </div>
+                
+                {/* User Details */}
+                <div style={{ textAlign: 'center', width: '100%' }}>
+                  <div style={{ fontWeight: 800, fontSize: '16px', textTransform: 'uppercase', color: '#1f2937', lineHeight: '1.2', marginBottom: '8px' }}>
+                    {mp.name}
+                  </div>
+                  <div style={{ fontSize: '13px', color: '#6b7280', fontWeight: 600 }}>
+                    {mp.nik}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }

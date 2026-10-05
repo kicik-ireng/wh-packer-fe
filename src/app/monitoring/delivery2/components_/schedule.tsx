@@ -23,7 +23,7 @@
 //   useEffect(() => {
 //     const fetchData = async () => {
 //       try {
-//         const res = await fetch('http://10.10.10.5:3001/schedule-truck');
+//         const res = await fetch('http://localhost:3001/schedule-truck');
 //         if (!res.ok) throw new Error('Failed to fetch schedules');
 //         const data: Schedule[] = await res.json();
 //         setSchedules(data);
@@ -112,7 +112,7 @@
 //   useEffect(() => {
 //     const fetchSchedules = async () => {
 //       try {
-//         const res = await fetch('http://10.10.10.5:3001/schedule-truck');
+//         const res = await fetch('http://localhost:3001/schedule-truck');
 //         if (!res.ok) throw new Error('Failed to fetch schedule');
 //         const data: ScheduleTruck[] = await res.json();
 //         setSchedules(data);

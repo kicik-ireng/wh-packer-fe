@@ -78,8 +78,8 @@ export default function DandoriPage() {
   useEffect(() => {
     const url =
       type === "2r"
-        ? "http://10.10.10.5:3001/incoming2r"
-        : "http://10.10.10.5:3001/incoming4r";
+        ? "http://localhost:3001/incoming2r"
+        : "http://localhost:3001/incoming4r";
 
     fetch(url)
       .then((res) => res.json())
@@ -110,8 +110,8 @@ export default function DandoriPage() {
   useEffect(() => {
     const url =
       type === "2r"
-        ? "http://10.10.10.5:3001/part-database-2r"
-        : "http://10.10.10.5:3001/part-database-4r";
+        ? "http://localhost:3001/part-database-2r"
+        : "http://localhost:3001/part-database-4r";
 
     fetch(url)
       .then((res) => res.json())
@@ -163,8 +163,8 @@ export default function DandoriPage() {
   //   };
 
   //   const url = type === '2r'
-  //     ? 'http://10.10.10.5:3001/incoming2r/manual'
-  //     : 'http://10.10.10.5:3001/incoming4r/manual';
+  //     ? 'http://localhost:3001/incoming2r/manual'
+  //     : 'http://localhost:3001/incoming4r/manual';
 
   //   await toast.promise(
   //     fetch(url, {
@@ -230,36 +230,36 @@ export default function DandoriPage() {
     const payload =
       type === "2r"
         ? {
-            prId: selectedPrId,
-            date: formatDateToDDMMYYYY(date),
-            cust: selectedPart.customer,
-            segment: selectedPart.segment,
-            assyNo16: selectedPart.assyNo16,
-            assyNo10: selectedPart.assyNo10,
-            oeNo: selectedPart.oeNo,
-            model: selectedPart.model,
-            EMIpartname: selectedPart.emiPartName ?? "",
-            kpp: selectedPart.kpp,
-            qtyPlan: totalQty,
-          }
+          prId: selectedPrId,
+          date: formatDateToDDMMYYYY(date),
+          cust: selectedPart.customer,
+          segment: selectedPart.segment,
+          assyNo16: selectedPart.assyNo16,
+          assyNo10: selectedPart.assyNo10,
+          oeNo: selectedPart.oeNo,
+          model: selectedPart.model,
+          EMIpartname: selectedPart.emiPartName ?? "",
+          kpp: selectedPart.kpp,
+          qtyPlan: totalQty,
+        }
         : {
-            prId: selectedPrId,
-            date: formatDateToDDMMYYYY(date),
-            cust: selectedPart.customer,
-            seg: selectedPart.segment,
-            assyNo16: selectedPart.assyNo16,
-            assyNo10: selectedPart.assyNo10,
-            oeNo: selectedPart.oeNo,
-            model: selectedPart.model,
-            kpp: selectedPart.kpp,
-            kppNp: selectedPart.kppNp ?? "",
-            qtyPlan: totalQty,
-          };
+          prId: selectedPrId,
+          date: formatDateToDDMMYYYY(date),
+          cust: selectedPart.customer,
+          seg: selectedPart.segment,
+          assyNo16: selectedPart.assyNo16,
+          assyNo10: selectedPart.assyNo10,
+          oeNo: selectedPart.oeNo,
+          model: selectedPart.model,
+          kpp: selectedPart.kpp,
+          kppNp: selectedPart.kppNp ?? "",
+          qtyPlan: totalQty,
+        };
 
     const url =
       type === "2r"
-        ? "http://10.10.10.5:3001/incoming2r/manual"
-        : "http://10.10.10.5:3001/incoming4r/manual";
+        ? "http://localhost:3001/incoming2r/manual"
+        : "http://localhost:3001/incoming4r/manual";
 
     await toast.promise(
       fetch(url, {
@@ -312,9 +312,9 @@ export default function DandoriPage() {
   );
 
   return (
-    <section className="bg-gradient-to-br from-blue-100 via-blue-200 to-blue-300 min-h-screen text-black rounded-2xl p-10 shadow-2xl space-y-8">
+    <section className="bg-gradient-to-br from-blue-100 via-blue-200 to-blue-300 min-h-screen text-black rounded-none p-1 shadow-2xl space-y-2">
       {/* HEADER */}
-      <div className="text-4xl font-extrabold flex items-center gap-4 tracking-tight drop-shadow-lg">
+      <div className="text-4xl font-extrabold flex items-center gap-2 tracking-tight drop-shadow-lg">
         <ScanLine className="w-8 h-8" />
         <span className="uppercase">Incoming Entry</span>
       </div>
@@ -322,11 +322,11 @@ export default function DandoriPage() {
       {/* FORM & PART LIST */}
       <ResizablePanelGroup
         direction="horizontal"
-        className="rounded-3xl border border-slate-300 min-h-[520px] bg-gradient-to-r from-slate-50 to-white shadow-2xl overflow-hidden p-2"
+        className="rounded-none border border-slate-300 min-h-[520px] bg-gradient-to-r from-slate-50 to-white shadow-2xl overflow-hidden p-2"
       >
         {/* FORM PANEL */}
         <ResizablePanel defaultSize={40} className="min-w-[320px] bg-white">
-          <div className="p-6 space-y-6 text-slate-800">
+          <div className="p-3 space-y-6 text-slate-800">
             {/* TIPE SELECT */}
             <div className="relative w-full">
               <label className="absolute -top-2 left-3 bg-white px-1 text-sm font-semibold text-blue-600 transform translate-y-[-50%] z-10">
@@ -336,10 +336,10 @@ export default function DandoriPage() {
                 value={type}
                 onValueChange={(val: "2r" | "4r") => setType(val)}
               >
-                <SelectTrigger className="w-full h-11 rounded-xl border border-slate-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 px-4 text-sm text-slate-800">
+                <SelectTrigger className="w-full h-11 rounded-none border border-slate-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 px-4 text-sm text-slate-800">
                   <SelectValue placeholder="Pilih Tipe" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl bg-white border border-slate-200 shadow-xl text-sm z-50 text-black">
+                <SelectContent className="rounded-none bg-white border border-slate-200 shadow-xl text-sm z-50 text-black">
                   <SelectItem
                     value="2r"
                     className="px-4 py-2 text-black hover:bg-blue-50 aria-selected:bg-blue-100 cursor-pointer font-medium"
@@ -374,7 +374,7 @@ export default function DandoriPage() {
                     setSelectedPrId(val);
                   }}
                   placeholder="Scan atau masukkan PR ID"
-                  className="flex-1 rounded-xl border border-slate-300 px-4 py-2 text-sm shadow-sm focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 rounded-none border border-slate-300 px-4 py-2 text-sm shadow-sm focus:ring-2 focus:ring-blue-500"
                 />
 
 
@@ -400,10 +400,10 @@ export default function DandoriPage() {
                   setIncomingType(val)
                 }
               >
-                <SelectTrigger className="w-full h-11 rounded-xl border border-slate-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 px-4 text-sm text-slate-800">
+                <SelectTrigger className="w-full h-11 rounded-none border border-slate-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 px-4 text-sm text-slate-800">
                   <SelectValue placeholder="Pilih Jenis Incoming" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl bg-white border border-slate-200 shadow-xl text-sm z-50 text-black">
+                <SelectContent className="rounded-none bg-white border border-slate-200 shadow-xl text-sm z-50 text-black">
                   <SelectItem
                     value="normal"
                     className="px-4 py-2 text-black hover:bg-blue-50 cursor-pointer font-medium"
@@ -445,7 +445,7 @@ export default function DandoriPage() {
                       ? "Scan atau masukkan PR ID (PCS...)"
                       : "Masukkan PR ID Manual (contoh: 1/DN)"
                   }
-                  className="flex-1 rounded-xl border border-slate-300 px-4 py-2 text-sm shadow-sm focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 rounded-none border border-slate-300 px-4 py-2 text-sm shadow-sm focus:ring-2 focus:ring-blue-500"
                 />
 
                 {incomingType === "normal" && (
@@ -470,7 +470,7 @@ export default function DandoriPage() {
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 px-4 py-2 text-sm shadow-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-none border border-slate-300 px-4 py-2 text-sm shadow-sm focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
@@ -482,7 +482,7 @@ export default function DandoriPage() {
                 value={qtyPlan}
                 onChange={(e) => setQtyPlan(e.target.value ? +e.target.value : "")}
                 placeholder="Masukkan Qty Plan"
-                className="w-full rounded-xl border border-slate-300 px-4 py-2 text-sm shadow-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-none border border-slate-300 px-4 py-2 text-sm shadow-sm focus:ring-2 focus:ring-blue-500"
               />
             </div> */}
 
@@ -499,7 +499,7 @@ export default function DandoriPage() {
                     setTrolleyQty(e.target.value ? +e.target.value : "")
                   }
                   placeholder="Masukkan Qty"
-                  className="flex-1 rounded-xl border border-slate-300 px-4 py-2 text-sm shadow-sm focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 rounded-none border border-slate-300 px-4 py-2 text-sm shadow-sm focus:ring-2 focus:ring-blue-500"
                 />
                 <Button
                   type="button"
@@ -509,7 +509,7 @@ export default function DandoriPage() {
                       setTrolleyQty("");
                     }
                   }}
-                  className="bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+                  className="bg-blue-600 text-white rounded-none hover:bg-blue-700"
                 >
                   + Tambah
                 </Button>
@@ -522,7 +522,7 @@ export default function DandoriPage() {
                 <label className="text-sm font-semibold text-slate-700">
                   Daftar Troli
                 </label>
-                <ul className="space-y-1 text-sm border rounded-xl p-2 bg-slate-50">
+                <ul className="space-y-1 text-sm border rounded-none p-2 bg-slate-50">
                   {trolleyList.map((qty, index) => (
                     <li
                       key={index}
@@ -553,14 +553,14 @@ export default function DandoriPage() {
             {/* SIMPAN BUTTON */}
             <Button
               onClick={handleSubmit}
-              className="w-full h-11 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl flex items-center justify-center shadow-md"
+              className="w-full h-11 bg-green-600 hover:bg-green-700 text-white font-bold rounded-none flex items-center justify-center shadow-md"
             >
               <Save className="mr-2 w-4 h-4" /> Simpan Dandori
             </Button>
 
             {/* 👇 SCANNER DITARUH DI SINI 👇 */}
             {scanMode && (
-              <div className="mt-4 border-2 border-blue-300 rounded-2xl bg-white shadow-md p-3 w-fit mx-auto">
+              <div className="mt-4 border-2 border-blue-300 rounded-none bg-white shadow-md p-3 w-fit mx-auto">
                 <BarcodeScanner
                   width={360}
                   height={240}
@@ -583,14 +583,14 @@ export default function DandoriPage() {
 
         {/* PART LIST PANEL */}
         <ResizablePanel defaultSize={55} className="bg-slate-50">
-          <div className="p-6 flex flex-col gap-6 h-full">
+          <div className="p-3 flex flex-col gap-2 h-full">
             {/* SEARCH */}
             <div className="relative">
               <input
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Cari part..."
-                className="w-full rounded-xl border border-slate-300 px-4 py-2 text-sm shadow-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-none border border-slate-300 px-4 py-2 text-sm shadow-sm focus:ring-2 focus:ring-blue-500"
               />
               <PackageSearch className="absolute top-2.5 right-3 w-4 h-4 text-black" />
             </div>
@@ -602,11 +602,10 @@ export default function DandoriPage() {
                   <li
                     key={p.id}
                     onClick={() => setSelectedPart(p)}
-                    className={`p-3 rounded-xl border text-sm cursor-pointer transition-all duration-200 shadow-sm ${
-                      selectedPart?.id === p.id
+                    className={`p-3 rounded-none border text-sm cursor-pointer transition-all duration-200 shadow-sm ${selectedPart?.id === p.id
                         ? "bg-white border-blue-500 text-blue-800 font-semibold"
                         : "text-black hover:bg-slate-100"
-                    }`}
+                      }`}
                   >
                     {p.model} – {p.assyNo16} – {p.customer}
                   </li>
@@ -619,7 +618,7 @@ export default function DandoriPage() {
 
             {/* DETAIL PART */}
             {selectedPart && (
-              <div className="mt-auto bg-white rounded-xl shadow-inner border border-slate-200 overflow-hidden">
+              <div className="mt-auto bg-white rounded-none shadow-inner border border-slate-200 overflow-hidden">
                 <table className="min-w-full text-sm text-slate-700">
                   <tbody className="divide-y divide-slate-100">
                     <TableRow label="Customer" value={selectedPart.customer} />
@@ -641,7 +640,7 @@ export default function DandoriPage() {
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>
-      <div className="mt-10 bg-white rounded-xl shadow-lg border border-slate-200 overflow-x-auto">
+      <div className="mt-10 bg-white rounded-none shadow-lg border border-slate-200 overflow-x-auto">
         <h2 className="text-lg font-bold text-slate-700 px-6 py-4 border-b border-slate-200 bg-slate-50">
           Data Incoming (Terbaru)
         </h2>
@@ -687,7 +686,7 @@ export default function DandoriPage() {
             <button
               onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
               disabled={currentPage === 1}
-              className="px-3 py-1 rounded-md border text-sm hover:bg-blue-100 disabled:opacity-50"
+              className="px-3 py-1 rounded-none border text-sm hover:bg-blue-100 disabled:opacity-50"
             >
               Prev
             </button>
@@ -699,7 +698,7 @@ export default function DandoriPage() {
             <button
               onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
               disabled={currentPage === totalPages}
-              className="px-3 py-1 rounded-md border text-sm hover:bg-blue-100 disabled:opacity-50"
+              className="px-3 py-1 rounded-none border text-sm hover:bg-blue-100 disabled:opacity-50"
             >
               Next
             </button>

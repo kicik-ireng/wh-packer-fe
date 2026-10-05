@@ -173,9 +173,9 @@ export default function PackingMonitor() {
   const fetchData = async () => {
     try {
       const [entryRes, mpRes, dashRes] = await Promise.all([
-        fetch("http://10.10.10.5:3001/packing-entry").then((res) => res.json()),
-        fetch("http://10.10.10.5:3001/manpower").then((res) => res.json()),
-        fetch("http://10.10.10.5:3001/dashboard").then((res) => res.json()),
+        fetch("http://localhost:3001/packing-entry").then((res) => res.json()),
+        fetch("http://localhost:3001/manpower").then((res) => res.json()),
+        fetch("http://localhost:3001/dashboard").then((res) => res.json()),
       ]);
       setManpower(mpRes);
       setCarry2r(dashRes.data2r || { plan2r: 0, notDone: 0 });
@@ -183,8 +183,8 @@ export default function PackingMonitor() {
       const latestDate =
         entryRes.length > 0
           ? dayjs(
-              entryRes[entryRes.length - 1].packingReport.tanggalPacking,
-            ).format("YYYY-MM-DD")
+            entryRes[entryRes.length - 1].packingReport.tanggalPacking,
+          ).format("YYYY-MM-DD")
           : dayjs().format("YYYY-MM-DD");
       const filtered = entryRes.filter(
         (e: any) =>

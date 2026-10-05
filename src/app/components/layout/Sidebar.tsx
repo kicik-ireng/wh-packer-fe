@@ -424,7 +424,7 @@
 
 //   const handleLogout = async () => {
 //     try {
-//       await fetch("http://10.10.10.5:3001/auth/logout", {
+//       await fetch("http://localhost:3001/auth/logout", {
 //         method: "POST",
 //         credentials: "include", // penting agar cookie ikut terkirim
 //       });
@@ -811,7 +811,7 @@ const Sidebar = () => {
 
   const handleLogout = async () => {
     try {
-      await fetch("http://10.10.10.5:3001/auth/logout", {
+      await fetch("http://localhost:3001/auth/logout", {
         method: "POST",
         credentials: "include", // penting agar cookie ikut terkirim
       });
@@ -826,18 +826,16 @@ const Sidebar = () => {
 
   return (
     <aside
-      className={`bg-white shadow-md min-h-screen flex flex-col justify-between transition-[width] duration-300 ease-in-out relative ${
-        collapsed ? "w-20" : "w-64"
-      } hidden md:flex overflow-hidden`}
+      className={`bg-white shadow-md min-h-screen flex flex-col justify-between transition-[width] duration-300 ease-in-out relative ${collapsed ? "w-20" : "w-64"
+        } hidden md:flex overflow-hidden`}
     >
       {/* Header */}
       <div className="flex items-center justify-center p-4 border-b">
         <img
           src="/logo_.png"
           alt="Admin Logo"
-          className={`h-10 transition-opacity duration-300 ${
-            collapsed ? "opacity-0 pointer-events-none" : "opacity-100"
-          }`}
+          className={`h-10 transition-opacity duration-300 ${collapsed ? "opacity-0 pointer-events-none" : "opacity-100"
+            }`}
         />
       </div>
 
@@ -1118,9 +1116,8 @@ const Sidebar = () => {
 
       {/* Footer + Logout */}
       <footer
-        className={`p-4 border-t text-xs text-gray-500 transition-all duration-300 ease-in-out transform ${
-          collapsed ? "opacity-0 scale-95" : "opacity-100 scale-100"
-        }`}
+        className={`p-4 border-t text-xs text-gray-500 transition-all duration-300 ease-in-out transform ${collapsed ? "opacity-0 scale-95" : "opacity-100 scale-100"
+          }`}
       >
         {!collapsed ? (
           <div className="space-y-2">

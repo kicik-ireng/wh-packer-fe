@@ -3,20 +3,18 @@
 import React, { useEffect, useState } from "react";
 import {
   Table,
-  Card,
   Typography,
   DatePicker,
   Space,
-  Button,
   Tag,
   message,
-  Select,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs, { Dayjs } from "dayjs";
 import { CalendarOutlined, FileExcelOutlined } from "@ant-design/icons";
+import ModernTable from "@/src/app/components/ModernTable";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 const { RangePicker } = DatePicker;
 
 interface DetailItem {
@@ -38,7 +36,6 @@ export default function MonthlyRekapPage() {
   const [data, setData] = useState<MonthlyRekap[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // filter state
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>(null);
   const [monthFilter, setMonthFilter] = useState<Dayjs | null>(null);
   const [dayFilter, setDayFilter] = useState<Dayjs | null>(null);
@@ -46,7 +43,7 @@ export default function MonthlyRekapPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      let url = `http://10.10.10.5:3001/monthly-rekap`;
+      let url = `http://localhost:3001/monthly-rekap`;
 
       if (dateRange) {
         const from = dateRange[0].format("YYYY-MM-DD");
@@ -164,12 +161,12 @@ export default function MonthlyRekapPage() {
   };
 
   return (
-    <div style={{ padding: 24 }}>
-      <Card
-        title={<Title level={4}>📊 Monthly Rekap</Title>}
-        extra={
+    <div className="w-full">
+      <ModernTable
+        title="Monthly Rekap / Salary"
+        icon={<FileExcelOutlined style={{ color: "#10b981", fontSize: 24 }} />}
+        extraActions={
           <Space>
-            {/* Range filter */}
             <RangePicker
               onChange={(val) => {
                 setDateRange(val as [Dayjs, Dayjs] | null);
@@ -179,7 +176,6 @@ export default function MonthlyRekapPage() {
               allowClear
               suffixIcon={<CalendarOutlined />}
             />
-            {/* Month filter */}
             <DatePicker
               picker="month"
               onChange={(val) => {
@@ -190,7 +186,6 @@ export default function MonthlyRekapPage() {
               allowClear
               placeholder="Pilih Bulan"
             />
-            {/* Day filter */}
             <DatePicker
               onChange={(val) => {
                 setDayFilter(val);
@@ -200,44 +195,14 @@ export default function MonthlyRekapPage() {
               allowClear
               placeholder="Pilih Tanggal"
             />
-
-            <Button
-              icon={<FileExcelOutlined />}
-              onClick={() => {
-                let url = `http://10.10.10.5:3001/monthly-rekap/export-excel`;
-                if (dateRange) {
-                  const from = dateRange[0].format("YYYY-MM-DD");
-                  const to = dateRange[1].format("YYYY-MM-DD");
-                  url += `?from=${from}&to=${to}`;
-                } else if (dayFilter) {
-                  const year = dayFilter.year();
-                  const month = dayFilter.month() + 1;
-                  const day = dayFilter.date();
-                  url += `?year=${year}&month=${month}&day=${day}`;
-                } else if (monthFilter) {
-                  const year = monthFilter.year();
-                  const month = monthFilter.month() + 1;
-                  url += `?year=${year}&month=${month}`;
-                } else {
-                  return message.warning("Pilih filter dulu");
-                }
-                window.open(url, "_blank");
-              }}
-            >
-              Export Excel
-            </Button>
           </Space>
         }
-      >
-        <Table
-          rowKey="name"
-          loading={loading}
-          columns={columns}
-          dataSource={data}
-          expandable={{ expandedRowRender }}
-          pagination={{ pageSize: 10 }}
-        />
-      </Card>
+        columns={columns}
+        dataSource={data}
+        rowKey="name"
+        loading={loading}
+        expandable={{ expandedRowRender }}
+      />
     </div>
   );
 }
