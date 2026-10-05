@@ -1,0 +1,20 @@
+{
+  "name": "Packing Report App",
+  "short_name": "PackingApp",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1d4ed8",
+  "icons": [
+    {
+      "src": "/logo_.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/logo_.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}

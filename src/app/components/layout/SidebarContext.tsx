@@ -1,0 +1,26 @@
+"use client";
+
+import { createContext, useContext, useState } from "react";
+
+const SidebarContext = createContext<{
+  collapsed: boolean;
+  setCollapsed: (val: boolean) => void;
+}>({
+  collapsed: false,
+  setCollapsed: () => {},
+});
+
+export const SidebarProvider = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
+  const [collapsed, setCollapsed] = useState(false);
+  return (
+    <SidebarContext.Provider value={{ collapsed, setCollapsed }}>
+      {children}
+    </SidebarContext.Provider>
+  );
+};
+
+export const useSidebar = () => useContext(SidebarContext);
