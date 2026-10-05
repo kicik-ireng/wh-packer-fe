@@ -11,6 +11,8 @@ import {
 import {
   LineChart,
   Line,
+  BarChart,
+  Bar,
   CartesianGrid,
   XAxis,
   YAxis,
@@ -37,8 +39,11 @@ export default function AdminDashboardPage() {
   const [chartData, setChartData] = useState<{ name: string; approved: number }[]>([]);
   const [dailyChartData, setDailyChartData] = useState<{ date: string; approved: number }[]>([]);
   const [approvalPieData, setApprovalPieData] = useState<{ name: string; value: number }[]>([]);
+  const [incomingPieData, setIncomingPieData] = useState<{ name: string; value: number }[]>([]);
+  const [problemPieData, setProblemPieData] = useState<{ name: string; value: number }[]>([]);
+  const [topModelData, setTopModelData] = useState<{ name: string; count: number }[]>([]);
 
-  const COLORS = ["#10b981", "#f59e0b", "#ef4444"]; // Green, Yellow, Red
+  const COLORS = ["#10b981", "#f59e0b", "#ef4444", "#3b82f6", "#8b5cf6", "#ec4899", "#14b8a6"];
 
   useEffect(() => {
     async function loadData() {
@@ -78,12 +83,13 @@ export default function AdminDashboardPage() {
           incoming4R: incoming4RData.length || 0,
         });
 
-        // Chart calculations
+        // 1. Chart calculations for Line & Approval
         const monthly = Array(12).fill(0);
         let approvedCount = 0;
         let pendingCount = 0;
         let rejectedCount = 0;
         const dailyMap = new Map<string, number>();
+        const modelMap = new Map<string, number>();
 
         allEntries.forEach((entry: any) => {
           const date = new Date(entry.tanggalPacking);
@@ -99,6 +105,11 @@ export default function AdminDashboardPage() {
 
           if (entry.status === "PENDING") pendingCount++;
           if (entry.status === "REJECTED") rejectedCount++;
+
+          const modelName = entry.customerPartNo || entry.model || entry.itemNo || "Unknown Part";
+          if (modelName !== "Unknown Part") {
+            modelMap.set(modelName, (modelMap.get(modelName) || 0) + 1);
+          }
         });
 
         const monthNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"];
@@ -118,6 +129,28 @@ export default function AdminDashboardPage() {
           { name: "Pending", value: pendingCount },
           { name: "Rejected", value: rejectedCount },
         ]);
+
+        // 2. Chart calculations for Incoming
+        setIncomingPieData([
+          { name: "Tipe 2R", value: incoming2RData.length || 0 },
+          { name: "Tipe 4R", value: incoming4RData.length || 0 },
+        ]);
+
+        // 3. Chart calculations for Problem Types
+        const problemMap = new Map<string, number>();
+        problemsData.forEach((prob: any) => {
+          const type = prob.problemItem || prob.title || "Lainnya";
+          problemMap.set(type, (problemMap.get(type) || 0) + 1);
+        });
+        const probPie = Array.from(problemMap.entries()).map(([name, value]) => ({ name, value }));
+        setProblemPieData(probPie);
+
+        // 4. Chart calculations for Top Models
+        const sortedModels = Array.from(modelMap.entries())
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 7)
+          .map(([name, count]) => ({ name: name.length > 15 ? name.substring(0, 15) + "..." : name, count }));
+        setTopModelData(sortedModels);
 
       } catch (error) {
         console.error("Gagal load data dashboard:", error);
@@ -223,6 +256,81 @@ export default function AdminDashboardPage() {
                   >
                     {approvalPieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Legend verticalAlign="bottom" height={36} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* ADDITIONAL CHARTS */}
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={12}>
+          <Card title="Top 7 Part / Model Paling Sering Di-packing" bordered={false} className="shadow-sm h-full">
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={topModelData} layout="vertical" margin={{ left: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={true} vertical={false} />
+                  <XAxis type="number" tick={{ fill: "#888" }} />
+                  <YAxis dataKey="name" type="category" tick={{ fill: "#888", fontSize: 12 }} width={100} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Bar dataKey="count" fill="#8b5cf6" radius={[0, 4, 4, 0]}>
+                    {topModelData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[(index + 3) % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </Col>
+        
+        <Col xs={24} md={12} lg={6}>
+          <Card title="Proporsi Incoming (2R vs 4R)" bordered={false} className="shadow-sm h-full">
+            <div className="h-[300px] flex items-center justify-center">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={incomingPieData}
+                    outerRadius={80}
+                    dataKey="value"
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  >
+                    <Cell fill="#14b8a6" />
+                    <Cell fill="#f43f5e" />
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Legend verticalAlign="bottom" height={36} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </Col>
+
+        <Col xs={24} md={12} lg={6}>
+          <Card title="Tipe Produksi Problem" bordered={false} className="shadow-sm h-full">
+            <div className="h-[300px] flex items-center justify-center">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={problemPieData}
+                    innerRadius={40}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {problemPieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[(index + 1) % COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip
