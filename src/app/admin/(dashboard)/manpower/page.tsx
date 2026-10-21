@@ -1,283 +1,195 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { FiUsers } from "react-icons/fi";
-import { PlusCircle, Pencil, Trash2, Printer } from "lucide-react";
-import { Button, Modal, Form, Input, Space, Popconfirm, message, QRCode } from "antd";
-import ModernTable from "@/src/app/components/ModernTable";
-
-interface Manpower {
-  id: number;
-  name: string;
-  nik: string;
-}
+import React, { useEffect, useState, useCallback } from 'react';
+import { Breadcrumb, message, Modal, QRCode, Typography } from 'antd';
+import {
+  ReloadOutlined,
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  QrcodeOutlined,
+} from '@ant-design/icons';
+import { useVuteqSso } from '@vuteq/sso-client-react/react';
+import { bffRequest } from '@/src/lib/client-api';
+import ToolbarWrapper from '@/src/app/components/ToolbarWrapper';
+import ButtonToolbar from '@/src/app/components/ButtonToolbar';
+import DataTable, { type Manpower } from './_components/data-table';
+import ModalCreate from './_components/modal-create';
+import ModalUpdate from './_components/modal-update';
 
 export default function ManpowerPage() {
   const [data, setData] = useState<Manpower[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState<Manpower>({ id: 0, name: "", nik: "" });
-  const [form] = Form.useForm();
-  const router = useRouter();
+  const [selectedItem, setSelectedItem] = useState<Manpower | undefined>(undefined);
+  const [openCreate, setOpenCreate] = useState(false);
+  const [openUpdate, setOpenUpdate] = useState(false);
+  const [openQR, setOpenQR] = useState(false);
 
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  const [selectedRows, setSelectedRows] = useState<Manpower[]>([]);
-  const [showPrintModal, setShowPrintModal] = useState(false);
+  const { session } = useVuteqSso();
+  const userRole = (session?.roles?.[0] as string) || (session?.attributes?.RoleName as string) || 'none';
+  const isAdmin = userRole === 'admin' || (session?.globalRoles ?? []).includes('SUPER_ADMINISTRATOR') || (session?.globalRoles ?? []).includes('GLOBAL_ADMINISTRATOR');
+  const userPermissions = (session?.permissions as string[]) ?? [];
 
-  useEffect(() => {
-    fetchManpower();
-  }, []);
+  const hasPerm = (perm: string) => {
+    if (isAdmin) return true;
+    return userPermissions.includes(perm) || userPermissions.includes('SUPER') || userPermissions.includes('*');
+  };
 
-  const fetchManpower = async () => {
+  const canCreate = hasPerm('PACKER.MANPOWER_CREATE');
+  const canUpdate = hasPerm('PACKER.MANPOWER_UPDATE');
+  const canDelete = hasPerm('PACKER.MANPOWER_DELETE');
+
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://10.10.10.5:5055/manpower", {
-        credentials: "include",
-      });
-      const json = await res.json();
-      setData(json);
-    } catch (err) {
-      message.error("Gagal mengambil data manpower");
-    }
-    setLoading(false);
-  };
-
-  const handleSave = async (values: any) => {
-    const method = formData.id ? "PATCH" : "POST";
-    const url = formData.id
-      ? `http://10.10.10.5:5055/manpower/${formData.id}`
-      : `http://10.10.10.5:5055/manpower`;
-
-    try {
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(values),
-      });
-
-      if (res.ok) {
-        message.success("Manpower saved successfully");
-        setShowForm(false);
-        fetchManpower();
-      } else {
-        message.error("Failed to save manpower");
+      const res = await bffRequest<Manpower[] | { data: Manpower[] }>('manpower');
+      const list = Array.isArray(res) ? res : res.data || [];
+      setData(list);
+      if (selectedItem) {
+        const stillExists = list.find((m) => m.id === selectedItem.id);
+        setSelectedItem(stillExists);
       }
-    } catch (error) {
-      message.error("An error occurred");
+    } catch (err: any) {
+      message.error(err.message || 'Gagal mengambil data manpower');
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [selectedItem]);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const handleDelete = async (id: number) => {
     try {
-      await fetch(`http://10.10.10.5:5055/manpower/${id}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      message.success("Manpower deleted");
-      fetchManpower();
-    } catch (err) {
-      message.error("Failed to delete manpower");
+      await bffRequest(`manpower/${id}`, { method: 'DELETE' });
+      message.success('Manpower berhasil dihapus');
+      if (selectedItem?.id === id) setSelectedItem(undefined);
+      fetchData();
+    } catch (err: any) {
+      message.error(err.message || 'Gagal menghapus manpower');
     }
   };
 
-  const openEdit = (item: Manpower) => {
-    setFormData(item);
-    form.setFieldsValue(item);
-    setShowForm(true);
-  };
-
-  const columns: any = [
-    {
-      title: "NIK",
-      dataIndex: "nik",
-      key: "nik",
-    },
-    {
-      title: "Nama",
-      dataIndex: "name",
-      key: "name",
-    },
-    {
-      title: "Aksi",
-      key: "action",
-      width: 150,
-      disableSearch: true,
-      render: (_: any, record: Manpower) => (
-        <Space>
-          <Button
-            type="text"
-            icon={<Pencil size={14} className="text-blue-500" />}
-            onClick={() => openEdit(record)}
-          />
-          <Popconfirm
-            title="Hapus manpower ini?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Ya"
-            cancelText="Batal"
-          >
-            <Button type="text" danger icon={<Trash2 size={14} />} />
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ];
-
-  const printData = selectedRows.length > 0 ? selectedRows : data;
-
-  const handlePrint = () => {
-    window.print();
-  };
-
   return (
-    <div className="w-full relative">
-      <style>
-        {`
-          @media print {
-            body * {
-              visibility: hidden !important;
-            }
-            #print-area, #print-area * {
-              visibility: visible !important;
-            }
-            #print-area {
-              position: absolute !important;
-              left: 0 !important;
-              top: 0 !important;
-              margin: 0 !important;
-              padding: 10mm !important;
-              width: 100% !important;
-              background-color: white !important;
-            }
-            .ant-modal-close, .ant-modal-footer, .ant-modal-header {
-              display: none !important;
-            }
-          }
-        `}
-      </style>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      <div style={{ flexShrink: 0, marginBottom: 8 }}>
+        <Breadcrumb
+          items={[
+            { title: 'Home' },
+            { title: 'Master Data' },
+            { title: 'Manpower' },
+          ]}
+        />
+        <div className="flex items-center justify-between mt-1">
+          <Typography.Title level={4} style={{ margin: 0 }}>
+            Master Data Manpower
+          </Typography.Title>
+        </div>
+      </div>
 
-      <ModernTable
-        title="Manpower Management"
-        icon={<FiUsers size={24} className="text-blue-600" />}
-        extraActions={
-          <Space>
-            <Button
-              type="default"
-              icon={<Printer size={16} className="text-gray-700" />}
-              onClick={() => setShowPrintModal(true)}
-            >
-              {selectedRows.length > 0 ? `Print ID (${selectedRows.length})` : "Print All ID"}
-            </Button>
-            <Button
-              type="primary"
-              icon={<PlusCircle size={16} />}
-              onClick={() => {
-                setFormData({ id: 0, name: "", nik: "" });
-                form.resetFields();
-                setShowForm(true);
-              }}
-            >
-              Tambah Manpower
-            </Button>
-          </Space>
-        }
-        columns={columns}
-        dataSource={data}
-        rowKey="id"
+      {/* Toolbar Standard: 1. Refresh paling kiri, 2. CRUD, NO search in toolbar */}
+      <div style={{ flexShrink: 0 }}>
+        <ToolbarWrapper>
+          <ButtonToolbar
+            title="Refresh"
+            icon={<ReloadOutlined />}
+            onClick={fetchData}
+            loading={loading}
+          />
+          <ButtonToolbar
+            title="Tambah"
+            icon={<PlusOutlined />}
+            onClick={() => setOpenCreate(true)}
+            enable={canCreate}
+          />
+          <ButtonToolbar
+            title="Edit"
+            icon={<EditOutlined />}
+            onClick={() => selectedItem && setOpenUpdate(true)}
+            enable={Boolean(selectedItem) && canUpdate}
+          />
+          <ButtonToolbar
+            title="Hapus"
+            icon={<DeleteOutlined />}
+            onClick={() => {
+              if (!selectedItem) return;
+              Modal.confirm({
+                title: 'Hapus Manpower',
+                content: `Apakah Anda yakin ingin menghapus ${selectedItem.name}?`,
+                okText: 'Hapus',
+                okButtonProps: { danger: true },
+                cancelText: 'Batal',
+                onOk: () => handleDelete(selectedItem.id),
+              });
+            }}
+            enable={Boolean(selectedItem) && canDelete}
+            danger
+          />
+          <ButtonToolbar
+            title="Cetak QR"
+            icon={<QrcodeOutlined />}
+            onClick={() => setOpenQR(true)}
+            enable={Boolean(selectedItem)}
+          />
+        </ToolbarWrapper>
+      </div>
+
+      {/* Data Table: area yang boleh scroll */}
+      <DataTable
+        data={data}
         loading={loading}
-        rowSelection={{
-          selectedRowKeys,
-          onChange: (newSelectedRowKeys: React.Key[], newSelectedRows: Manpower[]) => {
-            setSelectedRowKeys(newSelectedRowKeys);
-            setSelectedRows(newSelectedRows);
-          },
+        selectedKey={selectedItem?.id}
+        onSelectRow={setSelectedItem}
+        onEdit={(item) => {
+          setSelectedItem(item);
+          setOpenUpdate(true);
+        }}
+        onDelete={handleDelete}
+        onPrintQR={(item) => {
+          setSelectedItem(item);
+          setOpenQR(true);
+        }}
+        canUpdate={canUpdate}
+        canDelete={canDelete}
+      />
+
+      {/* Separate Modal Create */}
+      <ModalCreate
+        open={openCreate}
+        onCancel={() => setOpenCreate(false)}
+        onSuccess={() => {
+          setOpenCreate(false);
+          fetchData();
         }}
       />
 
-      {/* Modal Add/Edit */}
+      {/* Separate Modal Update */}
+      <ModalUpdate
+        open={openUpdate}
+        data={selectedItem ?? null}
+        onCancel={() => setOpenUpdate(false)}
+        onSuccess={() => {
+          setOpenUpdate(false);
+          fetchData();
+        }}
+      />
+
+      {/* QR Code Modal */}
       <Modal
-        title={formData.id ? "Edit Manpower" : "Tambah Manpower"}
-        open={showForm}
-        onCancel={() => setShowForm(false)}
+        title={`QR Code Manpower — ${selectedItem?.name ?? ''}`}
+        open={openQR}
+        onCancel={() => setOpenQR(false)}
         footer={null}
+        centered
+        width={360}
       >
-        <Form form={form} layout="vertical" onFinish={handleSave}>
-          <Form.Item
-            name="nik"
-            label="NIK"
-            rules={[{ required: true, message: "NIK wajib diisi" }]}
-          >
-            <Input placeholder="Masukkan NIK" />
-          </Form.Item>
-          <Form.Item
-            name="name"
-            label="Nama"
-            rules={[{ required: true, message: "Nama wajib diisi" }]}
-          >
-            <Input placeholder="Masukkan Nama" />
-          </Form.Item>
-          <div className="flex justify-end gap-2">
-            <Button onClick={() => setShowForm(false)}>Batal</Button>
-            <Button type="primary" htmlType="submit">
-              Simpan
-            </Button>
+        <div className="flex flex-col items-center justify-center py-4 gap-3">
+          <QRCode value={selectedItem?.nik || 'N/A'} size={200} />
+          <div className="text-center font-mono font-bold text-base text-gray-800">
+            {selectedItem?.nik}
           </div>
-        </Form>
-      </Modal>
-
-      {/* Modal Print ID Card */}
-      <Modal
-        title={selectedRows.length > 0 ? "Print Selected ID Cards" : "Print All ID Cards"}
-        open={showPrintModal}
-        onCancel={() => setShowPrintModal(false)}
-        width={800}
-        footer={[
-          <Button key="cancel" onClick={() => setShowPrintModal(false)}>
-            Batal
-          </Button>,
-          <Button key="print" type="primary" icon={<Printer size={16} />} onClick={handlePrint}>
-            Cetak Sekarang
-          </Button>,
-        ]}
-      >
-        <div className="max-h-[60vh] overflow-y-auto bg-gray-100 p-4 rounded-lg">
-          <div id="print-area" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 54mm)', gap: '10mm', justifyContent: 'center' }}>
-            {printData.map((mp) => (
-              <div
-                key={mp.id}
-                style={{
-                  width: '54mm',
-                  height: '86mm',
-                  border: '1px solid #d9d9d9',
-                  borderRadius: '12px',
-                  padding: '16px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: '#ffffff',
-                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                  breakInside: 'avoid'
-                }}
-              >
-                {/* QR Code */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', padding: '8px', borderRadius: '8px', marginBottom: '16px' }}>
-                  <QRCode value={mp.nik} size={130} bordered={false} errorLevel="H" />
-                </div>
-
-                {/* User Details */}
-                <div style={{ textAlign: 'center', width: '100%' }}>
-                  <div style={{ fontWeight: 800, fontSize: '16px', textTransform: 'uppercase', color: '#1f2937', lineHeight: '1.2', marginBottom: '8px' }}>
-                    {mp.name}
-                  </div>
-                  <div style={{ fontSize: '13px', color: '#6b7280', fontWeight: 600 }}>
-                    {mp.nik}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <div className="text-center text-sm text-gray-500">{selectedItem?.name}</div>
         </div>
       </Modal>
     </div>

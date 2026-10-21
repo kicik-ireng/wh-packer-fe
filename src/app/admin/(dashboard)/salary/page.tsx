@@ -1,208 +1,144 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from 'react';
+import { Breadcrumb, message, Typography, DatePicker, Space } from 'antd';
 import {
-  Table,
-  Typography,
-  DatePicker,
-  Space,
-  Tag,
-  message,
-} from "antd";
-import type { ColumnsType } from "antd/es/table";
-import dayjs, { Dayjs } from "dayjs";
-import { CalendarOutlined, FileExcelOutlined } from "@ant-design/icons";
-import ModernTable from "@/src/app/components/ModernTable";
+  ReloadOutlined,
+  DownloadOutlined,
+  CalendarOutlined,
+} from '@ant-design/icons';
+import dayjs, { Dayjs } from 'dayjs';
+import { useVuteqSso } from '@vuteq/sso-client-react/react';
+import { bffRequest } from '@/src/lib/client-api';
+import { withBasePath } from '@/src/lib/base-path';
+import ToolbarWrapper from '@/src/app/components/ToolbarWrapper';
+import ButtonToolbar from '@/src/app/components/ButtonToolbar';
+import DataTable, { type MonthlyRekap } from './_components/data-table';
 
-const { Text } = Typography;
 const { RangePicker } = DatePicker;
 
-interface DetailItem {
-  qty: number;
-  harga: number;
-}
-
-interface MonthlyRekap {
-  name: string;
-  totalQty: number;
-  totalHarga: number;
-  details: {
-    "2r"?: Record<string, DetailItem>;
-    "4r"?: Record<string, DetailItem>;
-  };
-}
-
-export default function MonthlyRekapPage() {
+export default function SalaryPage() {
   const [data, setData] = useState<MonthlyRekap[]>([]);
   const [loading, setLoading] = useState(false);
-
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>(null);
   const [monthFilter, setMonthFilter] = useState<Dayjs | null>(null);
-  const [dayFilter, setDayFilter] = useState<Dayjs | null>(null);
 
-  const fetchData = async () => {
+  const { session } = useVuteqSso();
+  const userRole = (session?.roles?.[0] as string) || (session?.attributes?.RoleName as string) || 'none';
+  const isAdmin = userRole === 'admin' || (session?.globalRoles ?? []).includes('SUPER_ADMINISTRATOR') || (session?.globalRoles ?? []).includes('GLOBAL_ADMINISTRATOR');
+  const userPermissions = (session?.permissions as string[]) ?? [];
+
+  const hasPerm = (perm: string) => {
+    if (isAdmin) return true;
+    return userPermissions.includes(perm) || userPermissions.includes('SUPER') || userPermissions.includes('*');
+  };
+
+  const canRead = hasPerm('PACKER.SALARY_READ');
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      let url = `http://10.10.10.5:5055/monthly-rekap`;
-
+      let query = '';
       if (dateRange) {
-        const from = dateRange[0].format("YYYY-MM-DD");
-        const to = dateRange[1].format("YYYY-MM-DD");
-        url += `?from=${from}&to=${to}`;
-      } else if (dayFilter) {
-        const year = dayFilter.year();
-        const month = dayFilter.month() + 1; // 0-based
-        const day = dayFilter.date();
-        url += `?year=${year}&month=${month}&day=${day}`;
+        const from = dateRange[0].format('YYYY-MM-DD');
+        const to = dateRange[1].format('YYYY-MM-DD');
+        query = `?from=${from}&to=${to}`;
       } else if (monthFilter) {
         const year = monthFilter.year();
         const month = monthFilter.month() + 1;
-        url += `?year=${year}&month=${month}`;
+        query = `?year=${year}&month=${month}`;
       }
 
-      const res = await fetch(url, { credentials: "include" });
-      if (!res.ok) throw new Error("Gagal ambil data");
-      const json = await res.json();
-      setData(json);
+      const res = await bffRequest<MonthlyRekap[] | { data: MonthlyRekap[] }>(`monthly-rekap${query}`);
+      const list = Array.isArray(res) ? res : res.data || [];
+      setData(list);
     } catch (err: any) {
-      message.error(err.message);
+      message.error(err.message || 'Gagal mengambil data rekap salary');
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateRange, monthFilter]);
 
   useEffect(() => {
     fetchData();
-  }, [dateRange, monthFilter, dayFilter]);
+  }, [fetchData]);
 
-  const columns: ColumnsType<MonthlyRekap> = [
-    {
-      title: "Customer",
-      dataIndex: "name",
-      key: "name",
-      render: (text) => <Text strong>{text}</Text>,
-    },
-    {
-      title: "Total Qty",
-      dataIndex: "totalQty",
-      key: "totalQty",
-      render: (val: number) => (
-        <Tag color="blue">{val.toLocaleString("id-ID")} PCS</Tag>
-      ),
-    },
-    {
-      title: "Total Salary",
-      dataIndex: "totalHarga",
-      key: "totalHarga",
-      render: (val: number) => (
-        <Tag color="green">Rp. {val.toLocaleString("id-ID")}</Tag>
-      ),
-    },
-  ];
-
-  const expandedRowRender = (record: MonthlyRekap) => {
-    const detailData: {
-      type: string;
-      kategori: string;
-      qty: number;
-      harga: number;
-    }[] = [];
-
-    if (record.details["2r"]) {
-      Object.entries(record.details["2r"]).forEach(([key, val]) => {
-        detailData.push({
-          type: "2R",
-          kategori: key,
-          qty: val.qty,
-          harga: val.harga,
-        });
-      });
-    }
-    if (record.details["4r"]) {
-      Object.entries(record.details["4r"]).forEach(([key, val]) => {
-        detailData.push({
-          type: "4R",
-          kategori: key,
-          qty: val.qty,
-          harga: val.harga,
-        });
-      });
+  const handleExport = () => {
+    let query = '';
+    if (dateRange) {
+      const from = dateRange[0].format('YYYY-MM-DD');
+      const to = dateRange[1].format('YYYY-MM-DD');
+      query = `?from=${from}&to=${to}`;
+    } else if (monthFilter) {
+      const year = monthFilter.year();
+      const month = monthFilter.month() + 1;
+      query = `?year=${year}&month=${month}`;
+    } else {
+      const now = dayjs();
+      query = `?year=${now.year()}&month=${now.month() + 1}`;
     }
 
-    return (
-      <Table
-        rowKey={(row) => row.type + row.kategori}
-        columns={[
-          {
-            title: "Type",
-            dataIndex: "type",
-            key: "type",
-            render: (t) => <Tag color={t === "2R" ? "blue" : "green"}>{t}</Tag>,
-          },
-          { title: "Kategori", dataIndex: "kategori", key: "kategori" },
-          {
-            title: "Qty",
-            dataIndex: "qty",
-            key: "qty",
-            render: (q: number) => `${q.toLocaleString("id-ID")} PCS`,
-          },
-          {
-            title: "Salary",
-            dataIndex: "harga",
-            key: "harga",
-            render: (h: number) => `Rp. ${h.toLocaleString("id-ID")}`,
-          },
-        ]}
-        dataSource={detailData}
-        pagination={false}
-        size="small"
-      />
-    );
+    window.open(withBasePath(`/api/proxy/monthly-rekap/export-excel${query}`), '_blank');
   };
 
   return (
-    <div className="w-full">
-      <ModernTable
-        title="Monthly Rekap / Salary"
-        icon={<FileExcelOutlined style={{ color: "#10b981", fontSize: 24 }} />}
-        extraActions={
-          <Space>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      <div style={{ flexShrink: 0, marginBottom: 8 }}>
+        <Breadcrumb
+          items={[
+            { title: 'Home' },
+            { title: 'Rekapitulasi' },
+            { title: 'Salary / Rekap Bulanan' },
+          ]}
+        />
+        <div className="flex items-center justify-between mt-1">
+          <Typography.Title level={4} style={{ margin: 0 }}>
+            Rekap Gaji & Output Manpower
+          </Typography.Title>
+        </div>
+      </div>
+
+      {/* Toolbar Standard */}
+      <div style={{ flexShrink: 0 }}>
+        <ToolbarWrapper>
+          <ButtonToolbar
+            title="Refresh"
+            icon={<ReloadOutlined />}
+            onClick={fetchData}
+            loading={loading}
+          />
+          <ButtonToolbar
+            title="Export Excel"
+            icon={<DownloadOutlined />}
+            onClick={handleExport}
+            enable={canRead}
+          />
+          <div className="flex items-center gap-2 ml-2">
             <RangePicker
+              size="small"
               onChange={(val) => {
                 setDateRange(val as [Dayjs, Dayjs] | null);
                 setMonthFilter(null);
-                setDayFilter(null);
               }}
               allowClear
               suffixIcon={<CalendarOutlined />}
             />
             <DatePicker
               picker="month"
+              size="small"
               onChange={(val) => {
                 setMonthFilter(val);
                 setDateRange(null);
-                setDayFilter(null);
               }}
               allowClear
               placeholder="Pilih Bulan"
             />
-            <DatePicker
-              onChange={(val) => {
-                setDayFilter(val);
-                setMonthFilter(null);
-                setDateRange(null);
-              }}
-              allowClear
-              placeholder="Pilih Tanggal"
-            />
-          </Space>
-        }
-        columns={columns}
-        dataSource={data}
-        rowKey="name"
-        loading={loading}
-        expandable={{ expandedRowRender }}
-      />
+          </div>
+        </ToolbarWrapper>
+      </div>
+
+      {/* Data Table */}
+      <DataTable data={data} loading={loading} />
     </div>
   );
 }

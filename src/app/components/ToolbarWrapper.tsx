@@ -1,22 +1,22 @@
-import React from 'react';
-import { Space } from 'antd';
+import type { ReactNode } from 'react';
 
-interface ToolbarWrapperProps {
-  title?: string;
-  leftContent?: React.ReactNode;
-  rightContent?: React.ReactNode;
-}
-
-export default function ToolbarWrapper({ title, leftContent, rightContent }: ToolbarWrapperProps) {
+export default function ToolbarWrapper({ children }: { children: ReactNode }) {
   return (
-    <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-3 mb-4 rounded-lg shadow-sm border border-gray-100 gap-2">
-      <div className="flex items-center gap-2">
-        {title && <h2 className="text-lg font-semibold text-gray-800 m-0">{title}</h2>}
-        {leftContent && <Space size="small">{leftContent}</Space>}
-      </div>
-      <div className="flex items-center w-full md:w-auto">
-        {rightContent && <Space size="small" className="w-full md:w-auto justify-end">{rightContent}</Space>}
-      </div>
+    <div
+      style={{
+        display: 'flex',
+        width: '100%',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: '8px',
+        margin: '8px 0 12px 0',
+        padding: '6px 12px',
+        backgroundColor: '#263545',
+        borderRadius: '6px',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+      }}
+    >
+      {children}
     </div>
   );
 }

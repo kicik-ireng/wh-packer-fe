@@ -1,13 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Row, Col, Card, Statistic, Spin } from "antd";
+import React, { useEffect, useState, useCallback } from 'react';
+import {
+  Row,
+  Col,
+  Card,
+  Statistic,
+  Spin,
+  Typography,
+  Breadcrumb,
+  Tag,
+  Space,
+  Badge,
+  Table,
+} from 'antd';
 import {
   TeamOutlined,
   FileDoneOutlined,
   ExclamationCircleOutlined,
-  DownloadOutlined
-} from "@ant-design/icons";
+  DownloadOutlined,
+  ReloadOutlined,
+  UserOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  CloseCircleOutlined,
+  CarOutlined,
+  DatabaseOutlined,
+} from '@ant-design/icons';
 import {
   LineChart,
   Line,
@@ -22,11 +41,16 @@ import {
   Pie,
   Cell,
   Legend,
-} from "recharts";
-import { useRouter } from "next/navigation";
+} from 'recharts';
+import { useVuteqSso } from '@vuteq/sso-client-react/react';
+import { bffRequest } from '@/src/lib/client-api';
+import ToolbarWrapper from '@/src/app/components/ToolbarWrapper';
+import ButtonToolbar from '@/src/app/components/ButtonToolbar';
+
+const COLORS = ['#10b981', '#f59e0b', '#ef4444', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6'];
 
 export default function AdminDashboardPage() {
-  const router = useRouter();
+  const { session } = useVuteqSso();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     manpower: 0,
@@ -34,240 +58,279 @@ export default function AdminDashboardPage() {
     problems: 0,
     incoming2R: 0,
     incoming4R: 0,
+    trucks: 0,
+    drivers: 0,
   });
 
-  const [chartData, setChartData] = useState<{ name: string; approved: number }[]>([]);
   const [dailyChartData, setDailyChartData] = useState<{ date: string; approved: number }[]>([]);
   const [approvalPieData, setApprovalPieData] = useState<{ name: string; value: number }[]>([]);
   const [incomingPieData, setIncomingPieData] = useState<{ name: string; value: number }[]>([]);
-  const [problemPieData, setProblemPieData] = useState<{ name: string; value: number }[]>([]);
-  const [topModelData, setTopModelData] = useState<{ name: string; count: number }[]>([]);
   const [topStockData, setTopStockData] = useState<{ name: string; stock: number; type: string }[]>([]);
+  const [recentEntries, setRecentEntries] = useState<any[]>([]);
 
-  const COLORS = ["#10b981", "#f59e0b", "#ef4444", "#3b82f6", "#8b5cf6", "#ec4899", "#14b8a6"];
+  const userRole = (session?.roles?.[0] as string) || (session?.attributes?.RoleName as string) || 'none';
+  const isAdmin =
+    userRole === 'admin' ||
+    (session?.globalRoles ?? []).includes('SUPER_ADMINISTRATOR') ||
+    (session?.globalRoles ?? []).includes('GLOBAL_ADMINISTRATOR');
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const [
-          manpowerRes,
-          packingRes,
-          problemRes,
-          incoming2RRes,
-          incoming4RRes,
-          stock2RRes,
-          stock4RRes,
-        ] = await Promise.all([
-          fetch("http://10.10.10.5:5055/manpower", { credentials: "include" }),
-          fetch("http://10.10.10.5:5055/packing-report", { credentials: "include" }),
-          fetch("http://10.10.10.5:5055/production-problem", { credentials: "include" }),
-          fetch("http://10.10.10.5:5055/incoming2r", { credentials: "include" }),
-          fetch("http://10.10.10.5:5055/incoming4r", { credentials: "include" }),
-          fetch("http://10.10.10.5:5055/stock/2r", { credentials: "include" }),
-          fetch("http://10.10.10.5:5055/stock/4r", { credentials: "include" }),
-        ]);
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [
+        manpowerData,
+        packingData,
+        problemsData,
+        incoming2RData,
+        incoming4RData,
+        stock2RData,
+        stock4RData,
+        trucksData,
+        driversData,
+      ] = await Promise.all([
+        bffRequest<any[]>('manpower').catch(() => []),
+        bffRequest<any[]>('packing-report').catch(() => []),
+        bffRequest<any[]>('production-problem').catch(() => []),
+        bffRequest<any[]>('incoming2r').catch(() => []),
+        bffRequest<any[]>('incoming4r').catch(() => []),
+        bffRequest<any[]>('stock/2r').catch(() => []),
+        bffRequest<any[]>('stock/4r').catch(() => []),
+        bffRequest<any[]>('truck').catch(() => []),
+        bffRequest<any[]>('driver').catch(() => []),
+      ]);
 
-        const manpowerData = await manpowerRes.json();
-        const packingData = await packingRes.json();
-        const problemsData = await problemRes.json();
-        const incoming2RData = await incoming2RRes.json();
-        const incoming4RData = await incoming4RRes.json();
-        const stock2RData = await stock2RRes.json();
-        const stock4RData = await stock4RRes.json();
+      const packingList = Array.isArray(packingData) ? packingData : (packingData as any)?.data || [];
+      const allEntries = packingList.flatMap((report: any) =>
+        (report.entries || []).map((entry: any) => ({
+          ...entry,
+          tanggalPacking: report.tanggalPacking,
+          lineNo: report.lineNo,
+        })),
+      );
 
-        const allEntries = packingData.flatMap((report: any) =>
-          (report.entries || []).map((entry: any) => ({
-            ...entry,
-            tanggalPacking: report.tanggalPacking,
-          }))
-        );
+      const mpList = Array.isArray(manpowerData) ? manpowerData : (manpowerData as any)?.data || [];
+      const probList = Array.isArray(problemsData) ? problemsData : (problemsData as any)?.data || [];
+      const in2List = Array.isArray(incoming2RData) ? incoming2RData : (incoming2RData as any)?.data || [];
+      const in4List = Array.isArray(incoming4RData) ? incoming4RData : (incoming4RData as any)?.data || [];
+      const st2List = Array.isArray(stock2RData) ? stock2RData : (stock2RData as any)?.data || [];
+      const st4List = Array.isArray(stock4RData) ? stock4RData : (stock4RData as any)?.data || [];
+      const trList = Array.isArray(trucksData) ? trucksData : (trucksData as any)?.data || [];
+      const drList = Array.isArray(driversData) ? driversData : (driversData as any)?.data || [];
 
-        setStats({
-          manpower: manpowerData.length || 0,
-          reports: allEntries.length || 0,
-          problems: problemsData.length || 0,
-          incoming2R: incoming2RData.length || 0,
-          incoming4R: incoming4RData.length || 0,
-        });
+      setStats({
+        manpower: mpList.length,
+        reports: allEntries.length,
+        problems: probList.length,
+        incoming2R: in2List.length,
+        incoming4R: in4List.length,
+        trucks: trList.length,
+        drivers: drList.length,
+      });
 
-        // 1. Chart calculations for Line & Approval
-        const monthly = Array(12).fill(0);
-        let approvedCount = 0;
-        let pendingCount = 0;
-        let rejectedCount = 0;
-        const dailyMap = new Map<string, number>();
-        const modelMap = new Map<string, number>();
+      // Recent packing entries
+      setRecentEntries(allEntries.slice(0, 5));
 
-        allEntries.forEach((entry: any) => {
-          const date = new Date(entry.tanggalPacking);
-          const month = date.getMonth();
+      // Trend & Pie data
+      let approvedCount = 0;
+      let pendingCount = 0;
+      let rejectedCount = 0;
+      const dailyMap = new Map<string, number>();
 
-          if (entry.status === "APPROVED") {
-            approvedCount++;
-            monthly[month] += 1;
-
-            const dateStr = date.toISOString().split("T")[0];
-            dailyMap.set(dateStr, (dailyMap.get(dateStr) || 0) + 1);
-          }
-
-          if (entry.status === "PENDING") pendingCount++;
-          if (entry.status === "REJECTED") rejectedCount++;
-
-          const modelName = entry.customerPartNo || entry.model || entry.itemNo || "Unknown Part";
-          if (modelName !== "Unknown Part") {
-            modelMap.set(modelName, (modelMap.get(modelName) || 0) + 1);
-          }
-        });
-
-        const monthNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"];
-        setChartData(monthly.map((val, idx) => ({ name: monthNames[idx], approved: val })));
-
-        const sortedDaily = Array.from(dailyMap.entries())
-          .sort(([a], [b]) => a.localeCompare(b))
-          .slice(-14)
-          .map(([date, count]) => ({
-            date: new Date(date).toLocaleDateString("id-ID", { day: "numeric", month: "short" }),
-            approved: count,
-          }));
-        setDailyChartData(sortedDaily);
-
-        setApprovalPieData([
-          { name: "Approved", value: approvedCount },
-          { name: "Pending", value: pendingCount },
-          { name: "Rejected", value: rejectedCount },
-        ]);
-
-        // 2. Chart calculations for Incoming
-        setIncomingPieData([
-          { name: "Tipe 2R", value: incoming2RData.length || 0 },
-          { name: "Tipe 4R", value: incoming4RData.length || 0 },
-        ]);
-
-        // 3. Chart calculations for Problem Types
-        const problemMap = new Map<string, number>();
-        problemsData.forEach((prob: any) => {
-          const type = prob.problemItem || prob.title || "Lainnya";
-          problemMap.set(type, (problemMap.get(type) || 0) + 1);
-        });
-        const probPie = Array.from(problemMap.entries()).map(([name, value]) => ({ name, value }));
-        setProblemPieData(probPie);
-
-        // 4. Chart calculations for Top Models
-        const sortedModels = Array.from(modelMap.entries())
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 7)
-          .map(([name, count]) => ({ name: name.length > 15 ? name.substring(0, 15) + "..." : name, count }));
-        setTopModelData(sortedModels);
-
-        // 5. Chart calculations for Top Stock
-        let combinedStock: { name: string; stock: number; type: string }[] = [];
-        if (Array.isArray(stock2RData)) {
-          combinedStock = combinedStock.concat(
-            stock2RData.map((s: any) => ({
-              name: s.part2r?.model || s.part2r?.oeNo || "2R Part",
-              stock: s.totalStock || 0,
-              type: "2R",
-            }))
-          );
+      allEntries.forEach((entry: any) => {
+        const date = new Date(entry.tanggalPacking);
+        if (entry.status === 'APPROVED') {
+          approvedCount++;
+          const dateStr = date.toISOString().split('T')[0];
+          dailyMap.set(dateStr, (dailyMap.get(dateStr) || 0) + 1);
+        } else if (entry.status === 'PENDING') {
+          pendingCount++;
+        } else if (entry.status === 'REJECTED') {
+          rejectedCount++;
         }
-        if (Array.isArray(stock4RData)) {
-          combinedStock = combinedStock.concat(
-            stock4RData.map((s: any) => ({
-              name: s.part4r?.model || s.part4r?.oeNo || "4R Part",
-              stock: s.totalStock || 0,
-              type: "4R",
-            }))
-          );
-        }
-        const sortedStocks = combinedStock
-          .sort((a, b) => b.stock - a.stock)
-          .slice(0, 10)
-          .map((item) => ({ ...item, name: item.name.length > 15 ? item.name.substring(0, 15) + "..." : item.name }));
-        setTopStockData(sortedStocks);
+      });
 
-      } catch (error) {
-        console.error("Gagal load data dashboard:", error);
-      } finally {
-        setLoading(false);
-      }
+      const sortedDaily = Array.from(dailyMap.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .slice(-14)
+        .map(([date, count]) => ({
+          date: new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
+          approved: count,
+        }));
+      setDailyChartData(sortedDaily);
+
+      setApprovalPieData([
+        { name: 'Approved', value: approvedCount },
+        { name: 'Pending', value: pendingCount },
+        { name: 'Rejected', value: rejectedCount },
+      ]);
+
+      setIncomingPieData([
+        { name: 'Tipe 2R', value: in2List.length },
+        { name: 'Tipe 4R', value: in4List.length },
+      ]);
+
+      // Stock
+      let combinedStock: { name: string; stock: number; type: string }[] = [];
+      combinedStock = combinedStock.concat(
+        st2List.map((s: any) => ({
+          name: s.part2r?.model || s.part2r?.oeNo || '2R Part',
+          stock: s.totalStock || 0,
+          type: '2R',
+        })),
+      );
+      combinedStock = combinedStock.concat(
+        st4List.map((s: any) => ({
+          name: s.part4r?.model || s.part4r?.oeNo || '4R Part',
+          stock: s.totalStock || 0,
+          type: '4R',
+        })),
+      );
+
+      const sortedStocks = combinedStock
+        .sort((a, b) => b.stock - a.stock)
+        .slice(0, 6)
+        .map((item) => ({
+          ...item,
+          name: item.name.length > 15 ? item.name.substring(0, 15) + '...' : item.name,
+        }));
+      setTopStockData(sortedStocks);
+    } catch (error) {
+      console.error('Gagal load data dashboard:', error);
+    } finally {
+      setLoading(false);
     }
-
-    loadData();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center min-h-[60vh]">
-        <Spin size="large" />
-      </div>
-    );
-  }
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800 m-0">Dashboard Overview</h1>
-        <p className="text-gray-500">Welcome to the Admin Portal. Here is your system summary.</p>
+    <div className="space-y-4 pb-8 overflow-y-auto max-h-full">
+      <div className="flex items-center justify-between">
+        <div>
+          <Breadcrumb items={[{ title: 'Home' }, { title: 'Dashboard' }]} />
+          <Typography.Title level={4} style={{ margin: '4px 0 0 0' }}>
+            WH Packer System Dashboard
+          </Typography.Title>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge status="processing" text="SSO Active" />
+          <Tag color={isAdmin ? 'purple' : 'default'} style={{ fontWeight: 600 }}>
+            {userRole.toUpperCase()}
+          </Tag>
+        </div>
       </div>
 
+      {/* Toolbar Standard */}
+      <ToolbarWrapper>
+        <ButtonToolbar
+          title="Refresh Data"
+          icon={<ReloadOutlined />}
+          onClick={loadData}
+          loading={loading}
+        />
+      </ToolbarWrapper>
+
+      {/* Welcome Banner */}
+      <Card
+        bordered={false}
+        className="shadow-sm"
+        style={{
+          background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)',
+          color: '#ffffff',
+          borderRadius: 8,
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-white m-0">
+              Selamat Datang, {session?.user?.name || (session?.attributes as any)?.Name || session?.user?.email || 'User'}!
+            </h2>
+            <p className="text-blue-100 text-sm mt-1 mb-0">
+              Sistem Operasional Pergudangan & Packer Exedy terintegrasi dengan Vuteq SSO.
+            </p>
+          </div>
+          <div className="text-right hidden sm:block">
+            <span className="text-xs bg-blue-900 bg-opacity-40 px-3 py-1.5 rounded-full text-blue-200">
+              Client ID: exedy-web
+            </span>
+          </div>
+        </div>
+      </Card>
+
+      {/* Summary KPI Cards */}
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false} className="shadow-sm">
+          <Card bordered={false} className="shadow-sm hover:shadow transition-shadow">
             <Statistic
               title="Total Manpower"
               value={stats.manpower}
               prefix={<TeamOutlined className="text-blue-500" />}
+              suffix="orang"
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false} className="shadow-sm">
+          <Card bordered={false} className="shadow-sm hover:shadow transition-shadow">
             <Statistic
-              title="Total Packing Entries"
+              title="Total Output Packing"
               value={stats.reports}
               prefix={<FileDoneOutlined className="text-green-500" />}
+              suffix="entries"
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false} className="shadow-sm">
+          <Card bordered={false} className="shadow-sm hover:shadow transition-shadow">
             <Statistic
-              title="Production Problems"
+              title="Masalah Produksi"
               value={stats.problems}
               prefix={<ExclamationCircleOutlined className="text-red-500" />}
               valueStyle={{ color: '#cf1322' }}
+              suffix="kejadian"
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false} className="shadow-sm">
+          <Card bordered={false} className="shadow-sm hover:shadow transition-shadow">
             <Statistic
               title="Total Incoming (2R & 4R)"
               value={stats.incoming2R + stats.incoming4R}
               prefix={<DownloadOutlined className="text-purple-500" />}
+              suffix="PR"
             />
           </Card>
         </Col>
       </Row>
 
+      {/* Charts Section */}
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={16}>
-          <Card title="Tren Packing APPROVED (14 Hari Terakhir)" bordered={false} className="shadow-sm h-full">
-            <div className="h-[300px]">
+          <Card
+            title="Tren Output Packing Approved (14 Hari Terakhir)"
+            bordered={false}
+            className="shadow-sm h-full"
+          >
+            <div className="h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={dailyChartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="date" tick={{ fill: "#888" }} />
-                  <YAxis tick={{ fill: "#888" }} />
+                  <XAxis dataKey="date" tick={{ fill: '#888', fontSize: 12 }} />
+                  <YAxis tick={{ fill: '#888', fontSize: 12 }} />
                   <Tooltip
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    contentStyle={{
+                      borderRadius: '8px',
+                      border: 'none',
+                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                    }}
                   />
                   <Line
                     type="monotone"
                     dataKey="approved"
-                    stroke="#3b82f6"
+                    stroke="#1677ff"
                     strokeWidth={3}
-                    dot={{ r: 4, fill: "#3b82f6", strokeWidth: 2 }}
+                    dot={{ r: 4, fill: '#1677ff', strokeWidth: 2 }}
                     activeDot={{ r: 6 }}
                   />
                 </LineChart>
@@ -275,25 +338,26 @@ export default function AdminDashboardPage() {
             </div>
           </Card>
         </Col>
+
         <Col xs={24} lg={8}>
           <Card title="Status Approval Packing" bordered={false} className="shadow-sm h-full">
-            <div className="h-[300px] flex items-center justify-center">
+            <div className="h-[280px] flex items-center justify-center">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={approvalPieData}
+                    cx="50%"
+                    cy="50%"
                     innerRadius={60}
-                    outerRadius={80}
+                    outerRadius={90}
                     paddingAngle={5}
                     dataKey="value"
                   >
-                    {approvalPieData.map((entry, index) => (
+                    {approvalPieData.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  />
+                  <Tooltip />
                   <Legend verticalAlign="bottom" height={36} />
                 </PieChart>
               </ResponsiveContainer>
@@ -302,103 +366,62 @@ export default function AdminDashboardPage() {
         </Col>
       </Row>
 
-      {/* ADDITIONAL CHARTS */}
+      {/* Stock & Operational Section */}
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={12}>
-          <Card title="Top 7 Part / Model Paling Sering Di-packing" bordered={false} className="shadow-sm h-full">
-            <div className="h-[300px]">
+          <Card title="Top Finished Goods Stock" bordered={false} className="shadow-sm h-full">
+            <div className="h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topModelData} layout="vertical" margin={{ left: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={true} vertical={false} />
-                  <XAxis type="number" tick={{ fill: "#888" }} />
-                  <YAxis dataKey="name" type="category" tick={{ fill: "#888", fontSize: 12 }} width={100} />
-                  <Tooltip
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  />
-                  <Bar dataKey="count" fill="#8b5cf6" radius={[0, 4, 4, 0]}>
-                    {topModelData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[(index + 3) % COLORS.length]} />
-                    ))}
-                  </Bar>
+                <BarChart data={topStockData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="name" tick={{ fill: '#888', fontSize: 11 }} />
+                  <YAxis tick={{ fill: '#888', fontSize: 12 }} />
+                  <Tooltip />
+                  <Bar dataKey="stock" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </Card>
         </Col>
 
-        <Col xs={24} md={12} lg={6}>
-          <Card title="Proporsi Incoming (2R vs 4R)" bordered={false} className="shadow-sm h-full">
-            <div className="h-[300px] flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={incomingPieData}
-                    outerRadius={80}
-                    dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+        <Col xs={24} lg={12}>
+          <Card
+            title="Aktivitas Packing Terbaru"
+            bordered={false}
+            className="shadow-sm h-full"
+            extra={<span className="text-xs text-gray-400">5 entri terakhir</span>}
+          >
+            <div className="space-y-3">
+              {recentEntries.length === 0 ? (
+                <div className="text-gray-400 text-center py-8">Belum ada aktivitas packing</div>
+              ) : (
+                recentEntries.map((entry, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-2.5 rounded-lg bg-gray-50 border border-gray-100"
                   >
-                    <Cell fill="#14b8a6" />
-                    <Cell fill="#f43f5e" />
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  />
-                  <Legend verticalAlign="bottom" height={36} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-        </Col>
-
-        <Col xs={24} md={12} lg={6}>
-          <Card title="Tipe Produksi Problem" bordered={false} className="shadow-sm h-full">
-            <div className="h-[300px] flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={problemPieData}
-                    innerRadius={40}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {problemPieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[(index + 1) % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  />
-                  <Legend verticalAlign="bottom" height={36} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-        </Col>
-      </Row>
-
-      {/* TOP STOCK CHART */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24}>
-          <Card title="Top 10 Part dengan Sisa Stock Terbanyak (2R & 4R)" bordered={false} className="shadow-sm">
-            <div className="h-[350px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topStockData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fill: "#888", fontSize: 12 }} />
-                  <YAxis tick={{ fill: "#888" }} />
-                  <Tooltip
-                    cursor={{ fill: 'transparent' }}
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                    formatter={(value, name, props) => [`${value} Pcs`, `Tipe: ${props.payload.type}`]}
-                  />
-                  <Bar dataKey="stock" radius={[4, 4, 0, 0]}>
-                    {topStockData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.type === "2R" ? "#14b8a6" : "#f43f5e"} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+                    <div>
+                      <div className="font-semibold text-gray-800 text-sm">
+                        {entry.packingReqNo || entry.customerPartNo || `Entry #${entry.id}`}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Line: {entry.lineNo || '-'} | Actual: {entry.qtyActualPacking || 0} PCS
+                      </div>
+                    </div>
+                    <Tag
+                      color={
+                        entry.status === 'APPROVED'
+                          ? 'success'
+                          : entry.status === 'REJECTED'
+                          ? 'error'
+                          : 'warning'
+                      }
+                    >
+                      {entry.status}
+                    </Tag>
+                  </div>
+                ))
+              )}
             </div>
           </Card>
         </Col>
