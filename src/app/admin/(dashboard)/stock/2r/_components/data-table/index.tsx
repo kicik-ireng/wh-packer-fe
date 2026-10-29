@@ -1,25 +1,26 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Table, Input, Button, Space, Tag } from 'antd';
-import type { TableProps, ColumnType } from 'antd/es/table';
-import { SearchOutlined, EditOutlined } from '@ant-design/icons';
+import React from 'react';
+import { Table, Button, Space, Tag } from 'antd';
+import type { TableProps } from 'antd/es/table';
+import { EditOutlined, FileTextOutlined } from '@ant-design/icons';
+import { getColumnSearchProps } from '@/src/app/components/table/columnSearch';
+import GoldenArrowAction from '@/src/app/components/GoldenArrowAction';
 
 export interface Stock2R {
   id: number;
+  part2rId: number;
   totalStock: number;
-  rack: string;
-  part2r: {
-    id: number;
+  rack?: string;
+  part2r?: {
+    id?: number;
     codeNo: string;
+    customer: string;
+    model: string;
     assyNo16: string;
     assyNo10: string;
     oeNo: string;
-    model: string;
     emiPartName: string;
-    kpp: string;
-    customer: string;
-    segment: string;
   };
 }
 
@@ -29,6 +30,7 @@ interface DataTableProps {
   selectedKey?: number;
   onSelectRow: (record: Stock2R | undefined) => void;
   onEdit: (record: Stock2R) => void;
+  onViewCard?: (record: Stock2R) => void;
   canUpdate: boolean;
 }
 
@@ -38,101 +40,60 @@ export default function DataTable({
   selectedKey,
   onSelectRow,
   onEdit,
+  onViewCard,
   canUpdate,
 }: DataTableProps) {
-  const [searchText, setSearchText] = useState<{ [key: string]: string }>({});
-
-  const getColumnSearchProps = (
-    accessor: (record: Stock2R) => string,
-    key: string,
-    title: string,
-  ): ColumnType<Stock2R> => ({
-    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
-      <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
-        <Input
-          placeholder={`Cari ${title}`}
-          value={selectedKeys[0]}
-          onChange={(e) => {
-            setSelectedKeys(e.target.value ? [e.target.value] : []);
-            setSearchText((prev) => ({ ...prev, [key]: e.target.value }));
-          }}
-          onPressEnter={() => confirm()}
-          style={{ marginBottom: 8, display: 'block' }}
-        />
-        <Space>
-          <Button
-            type="primary"
-            onClick={() => confirm()}
-            icon={<SearchOutlined />}
-            size="small"
-            style={{ width: 90 }}
-          >
-            Cari
-          </Button>
-          <Button
-            onClick={() => {
-              clearFilters?.();
-              setSearchText((prev) => ({ ...prev, [key]: '' }));
-              confirm();
-            }}
-            size="small"
-            style={{ width: 90 }}
-          >
-            Reset
-          </Button>
-        </Space>
-      </div>
-    ),
-    filterIcon: (filtered: boolean) => (
-      <SearchOutlined style={{ color: filtered ? '#1677ff' : undefined }} />
-    ),
-    onFilter: (value, record) => {
-      const val = accessor(record) || '';
-      return val.toLowerCase().includes((value as string).toLowerCase());
-    },
-  });
-
   const columns: TableProps<Stock2R>['columns'] = [
     {
       title: 'Assy No 16',
       key: 'assyNo16',
-      width: 140,
-      render: (_, r) => <span className="font-mono font-bold text-blue-700">{r.part2r?.assyNo16}</span>,
-      ...getColumnSearchProps((r) => r.part2r?.assyNo16, 'assyNo16', 'Assy 16'),
+      width: 150,
+      render: (_, r) => (
+        <Space size={6}>
+          <GoldenArrowAction
+            tooltip="Pilih / Detail Stok"
+            onClick={() => onSelectRow(r)}
+          />
+          <span className="font-mono font-bold text-[#4C6A85]">{r.part2r?.assyNo16}</span>
+        </Space>
+      ),
+      ...getColumnSearchProps<Stock2R>((r) => r.part2r?.assyNo16, 'Assy 16'),
     },
     {
       title: 'Assy No 10',
       key: 'assyNo10',
       width: 130,
-      render: (_, r) => r.part2r?.assyNo10,
+      render: (_, r) => r.part2r?.assyNo10 || '—',
+      ...getColumnSearchProps<Stock2R>((r) => r.part2r?.assyNo10, 'Assy 10'),
     },
     {
       title: 'OE No',
       key: 'oeNo',
       width: 130,
-      render: (_, r) => r.part2r?.oeNo,
+      render: (_, r) => r.part2r?.oeNo || '—',
+      ...getColumnSearchProps<Stock2R>((r) => r.part2r?.oeNo, 'OE No'),
     },
     {
       title: 'Model',
       key: 'model',
       width: 110,
-      render: (_, r) => r.part2r?.model,
-      ...getColumnSearchProps((r) => r.part2r?.model, 'model', 'Model'),
+      render: (_, r) => r.part2r?.model || '—',
+      ...getColumnSearchProps<Stock2R>((r) => r.part2r?.model, 'Model'),
     },
     {
       title: 'Part Name',
       key: 'emiPartName',
       width: 160,
       ellipsis: true,
-      render: (_, r) => r.part2r?.emiPartName,
-      ...getColumnSearchProps((r) => r.part2r?.emiPartName, 'emiPartName', 'Part Name'),
+      render: (_, r) => r.part2r?.emiPartName || '—',
+      ...getColumnSearchProps<Stock2R>((r) => r.part2r?.emiPartName, 'Part Name'),
     },
     {
       title: 'Customer',
       key: 'customer',
       width: 120,
-      render: (_, r) => <Tag color="blue">{r.part2r?.customer}</Tag>,
-      ...getColumnSearchProps((r) => r.part2r?.customer, 'customer', 'Customer'),
+      render: (_, r) => <Tag color="geekblue">{r.part2r?.customer}</Tag>,
+      ...getColumnSearchProps<Stock2R>((r) => r.part2r?.customer, 'Customer'),
     },
     {
       title: 'Total Stock',
@@ -142,7 +103,7 @@ export default function DataTable({
       align: 'right',
       sorter: (a, b) => (a.totalStock || 0) - (b.totalStock || 0),
       render: (val: number) => (
-        <span className={`font-bold ${val > 0 ? 'text-blue-600' : 'text-red-500'}`}>
+        <span className={`font-bold ${val > 0 ? 'text-[#4F46E5]' : 'text-red-500'}`}>
           {val?.toLocaleString('id-ID')}
         </span>
       ),
@@ -152,22 +113,32 @@ export default function DataTable({
       dataIndex: 'rack',
       key: 'rack',
       width: 130,
-      ...getColumnSearchProps((r) => r.rack, 'rack', 'Rack'),
-      render: (text) => (text ? <Tag color="geekblue">{text}</Tag> : <span className="text-gray-400">-</span>),
+      ...getColumnSearchProps<Stock2R>((r) => r.rack, 'Rack Location'),
+      render: (text) => (text ? <Tag color="default">{text}</Tag> : <span className="text-gray-400">—</span>),
     },
     {
       title: 'Aksi',
       key: 'actions',
-      width: 80,
+      width: 100,
       fixed: 'right',
       align: 'center',
       render: (_, record) => (
         <Space size="small">
+          <Button
+            type="text"
+            size="small"
+            icon={<FileTextOutlined style={{ color: '#4F46E5' }} />}
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewCard?.(record);
+            }}
+            title="Lihat Kartu Stok"
+          />
           {canUpdate && (
             <Button
               type="text"
               size="small"
-              icon={<EditOutlined style={{ color: '#faad14' }} />}
+              icon={<EditOutlined style={{ color: '#d97706' }} />}
               onClick={(e) => {
                 e.stopPropagation();
                 onEdit(record);
@@ -184,10 +155,12 @@ export default function DataTable({
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       <Table<Stock2R>
         size="small"
+        className="small-table"
         rowKey="id"
         columns={columns}
         dataSource={data}
         loading={loading}
+        rowClassName={(record) => (selectedKey === record.id ? 'ant-table-row-selected' : '')}
         rowSelection={{
           type: 'radio',
           selectedRowKeys: selectedKey ? [selectedKey] : [],
@@ -210,8 +183,7 @@ export default function DataTable({
           showSizeChanger: true,
           showTotal: (total, range) => `${range[0]}-${range[1]} dari ${total} data`,
         }}
-        scroll={{ x: 1300, y: 'calc(100vh - 320px)' }}
-        className="border border-gray-200 rounded-lg overflow-hidden shadow-sm"
+        scroll={{ x: 1300, y: 'calc(100vh - 330px)' }}
       />
     </div>
   );

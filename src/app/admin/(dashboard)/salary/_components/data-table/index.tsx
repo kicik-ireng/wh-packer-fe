@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Table, Input, Button, Space, Tag } from 'antd';
-import type { TableProps, ColumnType } from 'antd/es/table';
-import { SearchOutlined } from '@ant-design/icons';
+import React from 'react';
+import { Table, Tag, Space } from 'antd';
+import type { TableProps } from 'antd/es/table';
+import { getColumnSearchProps } from '@/src/app/components/table/columnSearch';
+import GoldenArrowAction from '@/src/app/components/GoldenArrowAction';
 
 interface DetailItem {
   qty: number;
@@ -26,68 +27,17 @@ interface DataTableProps {
 }
 
 export default function DataTable({ data, loading }: DataTableProps) {
-  const [searchText, setSearchText] = useState<{ [key: string]: string }>({});
-
-  const getColumnSearchProps = (
-    dataIndex: keyof MonthlyRekap,
-    title: string,
-  ): ColumnType<MonthlyRekap> => ({
-    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
-      <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
-        <Input
-          placeholder={`Cari ${title}`}
-          value={selectedKeys[0]}
-          onChange={(e) => {
-            setSelectedKeys(e.target.value ? [e.target.value] : []);
-            setSearchText((prev) => ({ ...prev, [dataIndex]: e.target.value }));
-          }}
-          onPressEnter={() => confirm()}
-          style={{ marginBottom: 8, display: 'block' }}
-        />
-        <Space>
-          <Button
-            type="primary"
-            onClick={() => confirm()}
-            icon={<SearchOutlined />}
-            size="small"
-            style={{ width: 90 }}
-          >
-            Cari
-          </Button>
-          <Button
-            onClick={() => {
-              clearFilters?.();
-              setSearchText((prev) => ({ ...prev, [dataIndex]: '' }));
-              confirm();
-            }}
-            size="small"
-            style={{ width: 90 }}
-          >
-            Reset
-          </Button>
-        </Space>
-      </div>
-    ),
-    filterIcon: (filtered: boolean) => (
-      <SearchOutlined style={{ color: filtered ? '#1677ff' : undefined }} />
-    ),
-    onFilter: (value, record) =>
-      Boolean(
-        record[dataIndex]
-          ? record[dataIndex].toString().toLowerCase().includes((value as string).toLowerCase())
-          : false,
-      ),
-  });
-
   const columns: TableProps<MonthlyRekap>['columns'] = [
     {
       title: 'Nama PIC / Manpower',
       dataIndex: 'name',
       key: 'name',
-      width: 250,
+      width: 260,
       sorter: (a, b) => a.name.localeCompare(b.name),
-      ...getColumnSearchProps('name', 'Nama PIC'),
-      render: (text) => <span className="font-semibold text-gray-800">{text}</span>,
+      ...getColumnSearchProps<MonthlyRekap>('name', 'Nama PIC'),
+      render: (text) => (
+        <span className="font-semibold text-[#293241]">{text}</span>
+      ),
     },
     {
       title: 'Total Qty Selesai',
@@ -96,7 +46,7 @@ export default function DataTable({ data, loading }: DataTableProps) {
       width: 180,
       align: 'right',
       sorter: (a, b) => a.totalQty - b.totalQty,
-      render: (val: number) => <Tag color="blue">{val.toLocaleString('id-ID')} PCS</Tag>,
+      render: (val: number) => <Tag color="geekblue">{val.toLocaleString('id-ID')} PCS</Tag>,
     },
     {
       title: 'Total Salary / Rekap',
@@ -105,7 +55,11 @@ export default function DataTable({ data, loading }: DataTableProps) {
       width: 200,
       align: 'right',
       sorter: (a, b) => a.totalHarga - b.totalHarga,
-      render: (val: number) => <Tag color="green">Rp. {val.toLocaleString('id-ID')}</Tag>,
+      render: (val: number) => (
+        <Tag color="success" style={{ fontWeight: 600 }}>
+          Rp. {val.toLocaleString('id-ID')}
+        </Tag>
+      ),
     },
   ];
 
@@ -140,36 +94,37 @@ export default function DataTable({ data, loading }: DataTableProps) {
 
     return (
       <Table
-        rowKey={(row) => row.type + row.kategori}
+        size="small"
+        className="small-table"
         columns={[
           {
             title: 'Tipe',
             dataIndex: 'type',
             key: 'type',
             width: 80,
-            render: (t) => <Tag color={t === '2R' ? 'cyan' : 'magenta'}>{t}</Tag>,
+            render: (type) => <Tag color={type === '2R' ? 'geekblue' : 'default'}>{type}</Tag>,
           },
-          { title: 'Kategori / Part', dataIndex: 'kategori', key: 'kategori' },
+          { title: 'Model / Kategori Part', dataIndex: 'kategori', key: 'kategori' },
           {
-            title: 'Qty',
+            title: 'Qty Selesai',
             dataIndex: 'qty',
             key: 'qty',
             width: 120,
             align: 'right',
-            render: (q: number) => `${q.toLocaleString('id-ID')} PCS`,
+            render: (v: number) => `${v.toLocaleString('id-ID')} PCS`,
           },
           {
-            title: 'Subtotal Salary',
+            title: 'Subtotal Rekap',
             dataIndex: 'harga',
             key: 'harga',
-            width: 160,
+            width: 150,
             align: 'right',
-            render: (h: number) => `Rp. ${h.toLocaleString('id-ID')}`,
+            render: (v: number) => `Rp. ${v.toLocaleString('id-ID')}`,
           },
         ]}
         dataSource={detailData}
         pagination={false}
-        size="small"
+        rowKey="kategori"
       />
     );
   };
@@ -178,19 +133,19 @@ export default function DataTable({ data, loading }: DataTableProps) {
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       <Table<MonthlyRekap>
         size="small"
+        className="small-table"
         rowKey="name"
         columns={columns}
         dataSource={data}
         loading={loading}
-        expandable={{ expandedRowRender }}
+        expandable={{ expandedRowRender, defaultExpandAllRows: false }}
         pagination={{
           defaultPageSize: 15,
           pageSizeOptions: ['15', '30', '50', '100'],
           showSizeChanger: true,
-          showTotal: (total, range) => `${range[0]}-${range[1]} dari ${total} data`,
+          showTotal: (total, range) => `${range[0]}-${range[1]} dari ${total} orang`,
         }}
-        scroll={{ x: 800, y: 'calc(100vh - 320px)' }}
-        className="border border-gray-200 rounded-lg overflow-hidden shadow-sm"
+        scroll={{ x: 'max-content', y: 'calc(100vh - 330px)' }}
       />
     </div>
   );

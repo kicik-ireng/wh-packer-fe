@@ -16,6 +16,16 @@ const nextConfig = {
   },
   output: 'standalone',
   poweredByHeader: false,
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/exedy',
+        basePath: false,
+        permanent: false,
+      },
+    ];
+  },
 };
 
 module.exports = withPWA(nextConfig);

@@ -11,6 +11,8 @@ import {
   Tag,
   Spin,
   Modal,
+  Badge,
+  Tooltip,
   type MenuProps,
 } from 'antd';
 import {
@@ -32,12 +34,17 @@ import {
   SafetyCertificateOutlined,
   SettingOutlined,
   KeyOutlined,
+  ScheduleOutlined,
+  BellOutlined,
+  InfoCircleOutlined,
 } from '@ant-design/icons';
+import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { useVuteqSso } from '@vuteq/sso-client-react/react';
 import { withBasePath, withoutBasePath } from '@/src/lib/base-path';
+import CreditInformationModal from '../CreditInformationModal';
 
-const { Header, Sider, Content } = Layout;
+const { Header, Sider, Content, Footer } = Layout;
 
 type NavItem = {
   key: string;
@@ -54,6 +61,7 @@ export default function AntdSidebarLayout({
   children: React.ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [creditsOpen, setCreditsOpen] = useState(false);
   const { session, loading } = useVuteqSso();
   const router = useRouter();
   const rawPathname = usePathname();
@@ -70,7 +78,17 @@ export default function AntdSidebarLayout({
       return;
     }
     const profile = session.attributes as { AccessStatus?: string; RoleName?: string } | undefined;
-    if (profile?.AccessStatus === 'PENDING') {
+    const isSuper =
+      session.globalRoles?.includes('SUPER_ADMINISTRATOR') ||
+      session.globalRoles?.includes('GLOBAL_ADMINISTRATOR') ||
+      session.globalRoles?.includes('GLOBAL_ADMIN') ||
+      session.roles?.includes('admin') ||
+      session.roles?.includes('Super Admin');
+    const roleName = isSuper
+      ? 'admin'
+      : (session.roles?.[0] as string) || profile?.RoleName || 'none';
+
+    if (!isSuper && (roleName.toLowerCase() === 'none' || profile?.AccessStatus === 'PENDING')) {
       router.replace('/auth/pending-account');
     }
   }, [loading, router, session]);
@@ -162,6 +180,18 @@ export default function AntdSidebarLayout({
       permission: 'PACKER.PACKING_REPORT_READ',
     },
     {
+      key: 'dandori-menu',
+      icon: <ScheduleOutlined />,
+      label: 'Dandori (Perintah Kerja)',
+      children: [
+        {
+          key: '/admin/dandori/packing-schedule',
+          label: 'Schedule Line (MP)',
+          permission: 'PACKER.PACKING_REPORT_READ',
+        },
+      ],
+    },
+    {
       key: '/admin/delivery',
       icon: <CarOutlined />,
       label: 'Delivery Order',
@@ -229,9 +259,10 @@ export default function AntdSidebarLayout({
 
   if (loading || !session) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 text-white">
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: "#020617" }}>
+        <Image src={withBasePath("/images/ansei-white.png")} alt="WH Packer logo" width={180} height={90} priority style={{ marginBottom: "24px" }} />
         <Spin size="large" />
-        <p className="mt-4 text-sm text-slate-300">Memeriksa sesi akun Vuteq SSO Anda...</p>
+        <div style={{ marginTop: "16px", fontSize: "16px", color: "#cbd5e1" }}>Memeriksa sesi akun Vuteq SSO Anda...</div>
       </div>
     );
   }
@@ -239,131 +270,201 @@ export default function AntdSidebarLayout({
   const isDashboardPage = pathname === '/admin/dashboard';
 
   return (
-    <Layout style={{ height: '100vh', overflow: 'hidden' }}>
-      <Sider
-        trigger={null}
-        collapsible
-        collapsed={collapsed}
-        theme="light"
-        className="shadow-md border-r border-gray-200"
-        width={260}
-        style={{
-          height: '100vh',
-          position: 'relative',
-          overflowY: 'auto',
-          zIndex: 20,
-        }}
-      >
-        <div className="flex items-center justify-center p-4 h-16 border-b border-gray-100 bg-white sticky top-0 z-10">
-          {!collapsed ? (
-            <div className="flex flex-col items-center">
-              <span className="text-lg font-black tracking-wide text-blue-700">PT VUTEQ</span>
-              <span className="text-[10px] tracking-widest uppercase font-semibold text-slate-400">
-                WH Packer System
-              </span>
-            </div>
-          ) : (
-            <span className="text-xl font-black text-blue-700">V</span>
-          )}
-        </div>
-        <Menu
-          theme="light"
-          mode="inline"
-          selectedKeys={[pathname]}
-          defaultOpenKeys={['master-data', 'warehouse', 'system-administration']}
-          items={menuItems}
-          onClick={(e) => {
-            router.push(e.key);
-          }}
-          style={{ borderRight: 0, paddingBottom: 60 }}
-        />
-      </Sider>
-
-      <Layout style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <Header
+    <>
+      <Layout style={{ minHeight: "100vh", display: "flex" }}>
+        <Sider
+          className="ansei-sider"
+          collapsible
+          collapsed={collapsed}
+          collapsedWidth={80}
+          onCollapse={setCollapsed}
+          width={260}
+          theme="dark"
           style={{
-            padding: '0 20px',
-            background: colorBgContainer,
-            height: 64,
-            lineHeight: '64px',
-            flexShrink: 0,
+            overflow: "auto",
+            height: "100vh",
+            position: "fixed",
+            left: 0,
+            top: 0,
+            bottom: 0,
+            zIndex: 100,
+            background: "#263545",
           }}
-          className="shadow-sm z-10 flex items-center justify-between border-b border-gray-100"
         >
-          <div className="flex items-center gap-3">
-            <Button
-              type="text"
-              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-              onClick={() => setCollapsed(!collapsed)}
-              style={{ fontSize: '16px', width: 40, height: 40 }}
+          <div className="text-center justify-center flex p-2 border-b border-[#304254]">
+            <Image
+              src={withBasePath("/images/ansei-white.png")}
+              alt="WH Packer logo"
+              width={collapsed ? 48 : 180}
+              height={collapsed ? 36 : 70}
+              priority
+              style={{ objectFit: "contain" }}
             />
-            <span className="text-base font-semibold text-gray-800">
-              Warehouse Packer Management
-            </span>
           </div>
+          <Menu
+            theme="dark"
+            style={{ background: "transparent", padding: "4px 8px", borderRight: 0 }}
+            selectedKeys={[pathname]}
+            defaultOpenKeys={['master-data', 'warehouse', 'system-administration']}
+            mode="inline"
+            items={menuItems}
+            onClick={(e) => {
+              router.push(e.key);
+            }}
+          />
+        </Sider>
 
-          <div className="flex items-center gap-4">
-            <Tag color={isAdmin ? 'geekblue' : 'default'} style={{ margin: 0, fontWeight: 600 }}>
-              {isAdmin ? 'ADMIN' : 'NONE'}
-            </Tag>
-            <div className="hidden sm:flex flex-col text-right leading-tight">
-              <span className="text-sm font-semibold text-gray-800">
-                {session?.user?.name || session?.user?.preferred_username || 'User'}
-              </span>
-              <span className="text-xs text-gray-400">{session?.user?.email}</span>
+        <Layout
+          style={{
+            marginLeft: collapsed ? 80 : 260,
+            transition: "margin-left .2s",
+            display: "flex",
+            flexDirection: "column",
+            height: "100vh",
+          }}
+        >
+          <Header
+            className="batik-bg ansei-header-footer"
+            style={{
+              padding: "0 16px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              position: "sticky",
+              top: 0,
+              zIndex: 1000,
+              width: "100%",
+              flexShrink: 0,
+              height: 60,
+              lineHeight: "60px",
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <Button
+                type="text"
+                icon={collapsed ? <MenuUnfoldOutlined style={{ color: "white" }} /> : <MenuFoldOutlined style={{ color: "white" }} />}
+                onClick={() => setCollapsed(!collapsed)}
+                style={{ fontSize: "16px", width: 36, height: 36 }}
+              />
+              <h2
+                style={{
+                  fontFamily: "Arial, Helvetica, sans-serif",
+                  fontSize: 18,
+                  fontWeight: 400,
+                  margin: 0,
+                  color: "white",
+                }}
+              >
+                Warehouse Packer System
+              </h2>
             </div>
-            <Dropdown
-              placement="bottomRight"
-              menu={{
-                items: [
-                  {
-                    key: 'profile',
-                    icon: <UserOutlined />,
-                    label: session?.user?.email || 'Profile',
-                    disabled: true,
-                  },
-                  {
-                    key: 'role',
-                    icon: <SafetyCertificateOutlined />,
-                    label: `Role: ${userRole.toUpperCase()}`,
-                    disabled: true,
-                  },
-                  { type: 'divider' },
-                  {
-                    key: 'logout',
-                    icon: <LogoutOutlined className="text-red-500" />,
-                    label: <span className="text-red-500 font-semibold">Logout SSO</span>,
-                    onClick: handleLogout,
-                  },
-                ],
+
+            <div style={{ display: "flex", alignItems: "center", gap: 10, height: 32 }}>
+              <span className="desktop-greeting" style={{ marginRight: 8, color: "white", fontSize: 13 }}>
+                Hello, {session?.user?.name || session?.user?.preferred_username || (session?.attributes as any)?.Name || 'User'}
+              </span>
+              <Tag color={isAdmin ? "geekblue" : "default"} style={{ margin: 0, fontWeight: 600 }}>
+                {isAdmin ? "ADMIN" : "USER"}
+              </Tag>
+              <Tooltip title="Notifications">
+                <span style={{ width: 32, height: 32, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                  <Badge count={0}>
+                    <BellOutlined style={{ fontSize: 18, color: "white" }} />
+                  </Badge>
+                </span>
+              </Tooltip>
+              <Tooltip title="Credits & Information">
+                <Button
+                  type="text"
+                  aria-label="Open credits and information"
+                  onClick={() => setCreditsOpen(true)}
+                  style={{ width: 32, height: 32, padding: 0 }}
+                  icon={<InfoCircleOutlined style={{ fontSize: 18, color: "white" }} />}
+                />
+              </Tooltip>
+              <Dropdown
+                placement="bottomRight"
+                menu={{
+                  items: [
+                    {
+                      key: "profile",
+                      icon: <UserOutlined />,
+                      label: session?.user?.email || "Profile",
+                      disabled: true,
+                    },
+                    {
+                      key: "role",
+                      icon: <SafetyCertificateOutlined />,
+                      label: `Role: ${userRole.toUpperCase()}`,
+                      disabled: true,
+                    },
+                    { type: "divider" },
+                    {
+                      key: "logout",
+                      icon: <LogoutOutlined className="text-red-500" />,
+                      label: <span className="text-red-500 font-semibold">Logout SSO</span>,
+                      onClick: handleLogout,
+                    },
+                  ],
+                }}
+              >
+                <Avatar
+                  icon={<UserOutlined />}
+                  size={32}
+                  style={{ cursor: "pointer", backgroundColor: "#4C6A85" }}
+                />
+              </Dropdown>
+            </div>
+          </Header>
+
+          {/* Content Area: Consistent corporate styling */}
+          <Content
+            style={{
+              margin: "16px 12px",
+              overflow: "auto",
+              flex: 1,
+              minHeight: 0,
+            }}
+          >
+            <div
+              className="ansei-content-surface"
+              style={{
+                padding: 18,
+                minHeight: "100%",
+                background: "#FCFCFA",
+                borderRadius: 6,
+                display: "flex",
+                flexDirection: "column",
               }}
             >
-              <Avatar
-                icon={<UserOutlined />}
-                style={{ backgroundColor: isAdmin ? '#1677ff' : '#64748b', cursor: 'pointer' }}
-                size={36}
-              />
-            </Dropdown>
-          </div>
-        </Header>
+              {children}
+            </div>
+          </Content>
 
-        {/* Content Area: Main page does not scroll; only data tables or dashboard can scroll */}
-        <Content
-          style={{
-            margin: '14px 16px',
-            padding: '16px',
-            background: colorBgContainer,
-            borderRadius: borderRadiusLG,
-            flex: 1,
-            minHeight: 0,
-            overflowY: isDashboardPage ? 'auto' : 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
-          {children}
-        </Content>
+          {/* Footer */}
+          <Footer
+            className="batik-bg ansei-header-footer"
+            style={{
+              textAlign: "center",
+              color: "white",
+              fontSize: 13,
+              fontWeight: 400,
+              position: "sticky",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              zIndex: 999,
+              flexShrink: 0,
+              padding: "8px 16px",
+            }}
+          >
+            <span>Warehouse Packer System © {new Date().getFullYear()} PT Vuteq Indonesia</span>
+            <span style={{ margin: "0 8px" }}>|</span>
+            <span>v1.0.0</span>
+          </Footer>
+        </Layout>
       </Layout>
-    </Layout>
+      <CreditInformationModal open={creditsOpen} onClose={() => setCreditsOpen(false)} />
+    </>
   );
 }

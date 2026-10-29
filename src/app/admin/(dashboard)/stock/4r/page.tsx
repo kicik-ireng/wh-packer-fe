@@ -7,6 +7,7 @@ import {
   EditOutlined,
   UploadOutlined,
   DownloadOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import { useVuteqSso } from '@vuteq/sso-client-react/react';
 import { bffRequest } from '@/src/lib/client-api';
@@ -16,6 +17,7 @@ import ButtonToolbar from '@/src/app/components/ButtonToolbar';
 import DataTable, { type Stock4R } from './_components/data-table';
 import ModalUpdate from './_components/modal-update';
 import ModalImport from './_components/modal-import';
+import ModalStockCard from '@/src/app/components/ModalStockCard';
 
 export default function Stock4RPage() {
   const [data, setData] = useState<Stock4R[]>([]);
@@ -23,6 +25,8 @@ export default function Stock4RPage() {
   const [selectedItem, setSelectedItem] = useState<Stock4R | undefined>(undefined);
   const [openUpdate, setOpenUpdate] = useState(false);
   const [openImport, setOpenImport] = useState(false);
+  const [openStockCard, setOpenStockCard] = useState(false);
+  const [cardPart, setCardPart] = useState<{ id: number; name: string } | null>(null);
 
   const { session } = useVuteqSso();
   const userRole = (session?.roles?.[0] as string) || (session?.attributes?.RoleName as string) || 'none';
@@ -89,6 +93,21 @@ export default function Stock4RPage() {
             loading={loading}
           />
           <ButtonToolbar
+            title="Kartu Stok"
+            icon={<FileTextOutlined />}
+            onClick={() => {
+              const partId = selectedItem?.part4r?.id || selectedItem?.part4rId;
+              if (partId && selectedItem) {
+                setCardPart({
+                  id: partId,
+                  name: `${selectedItem.part4r?.model || ''} - ${selectedItem.part4r?.oeNo || selectedItem.part4r?.assyNo16 || ''}`,
+                });
+                setOpenStockCard(true);
+              }
+            }}
+            enable={Boolean(selectedItem)}
+          />
+          <ButtonToolbar
             title="Edit Stock / Rak"
             icon={<EditOutlined />}
             onClick={() => selectedItem && setOpenUpdate(true)}
@@ -119,6 +138,17 @@ export default function Stock4RPage() {
           setSelectedItem(item);
           setOpenUpdate(true);
         }}
+        onViewCard={(item) => {
+          const partId = item?.part4r?.id || item?.part4rId;
+          if (partId) {
+            setSelectedItem(item);
+            setCardPart({
+              id: partId,
+              name: `${item.part4r?.model || ''} - ${item.part4r?.oeNo || item.part4r?.assyNo16 || ''}`,
+            });
+            setOpenStockCard(true);
+          }
+        }}
         canUpdate={canUpdate}
       />
 
@@ -140,6 +170,14 @@ export default function Stock4RPage() {
           setOpenImport(false);
           fetchData();
         }}
+      />
+
+      <ModalStockCard
+        open={openStockCard}
+        onClose={() => setOpenStockCard(false)}
+        type="4r"
+        partId={cardPart?.id}
+        partName={cardPart?.name}
       />
     </div>
   );

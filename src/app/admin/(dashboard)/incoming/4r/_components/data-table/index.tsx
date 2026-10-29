@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Table, Input, Button, Space, Popconfirm, Tag } from 'antd';
-import type { TableProps, ColumnType } from 'antd/es/table';
-import { SearchOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import React from 'react';
+import { Table, Button, Space, Popconfirm, Tag } from 'antd';
+import type { TableProps } from 'antd/es/table';
+import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { getColumnSearchProps } from '@/src/app/components/table/columnSearch';
+import GoldenArrowAction from '@/src/app/components/GoldenArrowAction';
 
 export interface Incoming4r {
   id: number;
@@ -43,72 +45,32 @@ export default function DataTable({
   canUpdate,
   canDelete,
 }: DataTableProps) {
-  const [searchText, setSearchText] = useState<{ [key: string]: string }>({});
-
-  const getColumnSearchProps = (dataIndex: keyof Incoming4r, title: string): ColumnType<Incoming4r> => ({
-    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
-      <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
-        <Input
-          placeholder={`Cari ${title}`}
-          value={selectedKeys[0]}
-          onChange={(e) => {
-            setSelectedKeys(e.target.value ? [e.target.value] : []);
-            setSearchText((prev) => ({ ...prev, [dataIndex]: e.target.value }));
-          }}
-          onPressEnter={() => confirm()}
-          style={{ marginBottom: 8, display: 'block' }}
-        />
-        <Space>
-          <Button
-            type="primary"
-            onClick={() => confirm()}
-            icon={<SearchOutlined />}
-            size="small"
-            style={{ width: 90 }}
-          >
-            Cari
-          </Button>
-          <Button
-            onClick={() => {
-              clearFilters?.();
-              setSearchText((prev) => ({ ...prev, [dataIndex]: '' }));
-              confirm();
-            }}
-            size="small"
-            style={{ width: 90 }}
-          >
-            Reset
-          </Button>
-        </Space>
-      </div>
-    ),
-    filterIcon: (filtered: boolean) => (
-      <SearchOutlined style={{ color: filtered ? '#1677ff' : undefined }} />
-    ),
-    onFilter: (value, record) =>
-      Boolean(
-        record[dataIndex]
-          ? record[dataIndex]!.toString().toLowerCase().includes((value as string).toLowerCase())
-          : false,
-      ),
-  });
-
   const columns: TableProps<Incoming4r>['columns'] = [
     {
       title: 'PR ID',
       dataIndex: 'prId',
       key: 'prId',
-      width: 130,
+      width: 140,
       sorter: (a, b) => (a.prId || '').localeCompare(b.prId || ''),
-      ...getColumnSearchProps('prId', 'PR ID'),
-      render: (text) => <span className="font-mono font-bold text-blue-700">{text}</span>,
+      ...getColumnSearchProps<Incoming4r>('prId', 'PR ID'),
+      render: (text, record) => (
+        <Space size={6}>
+          <GoldenArrowAction
+            tooltip="Pilih / Detail Incoming 4R"
+            onClick={() => onSelectRow(record)}
+          />
+          <span className="font-mono font-bold text-[#4C6A85]">{text}</span>
+        </Space>
+      ),
     },
     {
       title: 'Tanggal',
       dataIndex: 'date',
       key: 'date',
       width: 120,
-      render: (text: string) => (text ? new Date(text).toLocaleDateString('id-ID') : '-'),
+      sorter: (a, b) => (a.date || '').localeCompare(b.date || ''),
+      ...getColumnSearchProps<Incoming4r>((r) => (r.date ? new Date(r.date).toLocaleDateString('id-ID') : ''), 'Tanggal'),
+      render: (text: string) => (text ? new Date(text).toLocaleDateString('id-ID') : '—'),
     },
     {
       title: 'Customer',
@@ -116,34 +78,41 @@ export default function DataTable({
       key: 'cust',
       width: 120,
       sorter: (a, b) => (a.cust || '').localeCompare(b.cust || ''),
-      ...getColumnSearchProps('cust', 'Customer'),
-      render: (text) => <Tag color="blue">{text}</Tag>,
+      ...getColumnSearchProps<Incoming4r>('cust', 'Customer'),
+      render: (text) => <Tag color="geekblue">{text}</Tag>,
     },
     {
       title: 'Model',
       dataIndex: 'model',
       key: 'model',
       width: 110,
-      ...getColumnSearchProps('model', 'Model'),
+      sorter: (a, b) => (a.model || '').localeCompare(b.model || ''),
+      ...getColumnSearchProps<Incoming4r>('model', 'Model'),
     },
     {
       title: 'Assy No 16',
       dataIndex: 'assyNo16',
       key: 'assyNo16',
       width: 140,
-      ...getColumnSearchProps('assyNo16', 'Assy 16'),
+      sorter: (a, b) => (a.assyNo16 || '').localeCompare(b.assyNo16 || ''),
+      ...getColumnSearchProps<Incoming4r>('assyNo16', 'Assy 16'),
     },
     {
       title: 'OE No',
       dataIndex: 'oeNo',
       key: 'oeNo',
       width: 130,
+      sorter: (a, b) => (a.oeNo || '').localeCompare(b.oeNo || ''),
+      ...getColumnSearchProps<Incoming4r>('oeNo', 'OE No'),
     },
     {
       title: 'KPP NP',
       dataIndex: 'kppNp',
       key: 'kppNp',
       width: 120,
+      sorter: (a, b) => (a.kppNp || '').localeCompare(b.kppNp || ''),
+      ...getColumnSearchProps<Incoming4r>('kppNp', 'KPP NP'),
+      render: (val) => <Tag color="default">{val}</Tag>,
     },
     {
       title: 'Qty Plan',
@@ -151,6 +120,7 @@ export default function DataTable({
       key: 'qtyPlan',
       width: 100,
       align: 'right',
+      sorter: (a, b) => (a.qtyPlan || 0) - (b.qtyPlan || 0),
       render: (val: number) => <span className="font-semibold">{val?.toLocaleString('id-ID')}</span>,
     },
     {
@@ -159,6 +129,7 @@ export default function DataTable({
       key: 'qtyActual',
       width: 100,
       align: 'right',
+      sorter: (a, b) => (a.qtyActual || 0) - (b.qtyActual || 0),
       render: (val: number) => (
         <span className="font-semibold text-emerald-600">{val ? val.toLocaleString('id-ID') : '0'}</span>
       ),
@@ -194,7 +165,7 @@ export default function DataTable({
             <Button
               type="text"
               size="small"
-              icon={<EditOutlined style={{ color: '#faad14' }} />}
+              icon={<EditOutlined style={{ color: '#d97706' }} />}
               onClick={(e) => {
                 e.stopPropagation();
                 onEdit(record);
@@ -233,10 +204,12 @@ export default function DataTable({
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       <Table<Incoming4r>
         size="small"
+        className="small-table"
         rowKey="id"
         columns={columns}
         dataSource={data}
         loading={loading}
+        rowClassName={(record) => (selectedKey === record.id ? 'ant-table-row-selected' : '')}
         rowSelection={{
           type: 'radio',
           selectedRowKeys: selectedKey ? [selectedKey] : [],
@@ -259,8 +232,7 @@ export default function DataTable({
           showSizeChanger: true,
           showTotal: (total, range) => `${range[0]}-${range[1]} dari ${total} data`,
         }}
-        scroll={{ x: 1350, y: 'calc(100vh - 320px)' }}
-        className="border border-gray-200 rounded-lg overflow-hidden shadow-sm"
+        scroll={{ x: 1350, y: 'calc(100vh - 330px)' }}
       />
     </div>
   );

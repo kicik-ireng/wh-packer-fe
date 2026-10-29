@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Table, Input, Button, Space, Popconfirm, Tag } from 'antd';
-import type { TableProps, ColumnType } from 'antd/es/table';
-import { SearchOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import React from 'react';
+import { Table, Button, Space, Popconfirm, Tag } from 'antd';
+import type { TableProps } from 'antd/es/table';
+import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { getColumnSearchProps } from '@/src/app/components/table/columnSearch';
+import GoldenArrowAction from '@/src/app/components/GoldenArrowAction';
 
 export interface ScheduleTruck {
   id: number;
@@ -35,80 +37,42 @@ export default function DataTable({
   canUpdate,
   canDelete,
 }: DataTableProps) {
-  const [searchText, setSearchText] = useState<{ [key: string]: string }>({});
-
-  const getColumnSearchProps = (
-    accessor: (record: ScheduleTruck) => string,
-    key: string,
-    title: string,
-  ): ColumnType<ScheduleTruck> => ({
-    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
-      <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
-        <Input
-          placeholder={`Cari ${title}`}
-          value={selectedKeys[0]}
-          onChange={(e) => {
-            setSelectedKeys(e.target.value ? [e.target.value] : []);
-            setSearchText((prev) => ({ ...prev, [key]: e.target.value }));
-          }}
-          onPressEnter={() => confirm()}
-          style={{ marginBottom: 8, display: 'block' }}
-        />
-        <Space>
-          <Button
-            type="primary"
-            onClick={() => confirm()}
-            icon={<SearchOutlined />}
-            size="small"
-            style={{ width: 90 }}
-          >
-            Cari
-          </Button>
-          <Button
-            onClick={() => {
-              clearFilters?.();
-              setSearchText((prev) => ({ ...prev, [key]: '' }));
-              confirm();
-            }}
-            size="small"
-            style={{ width: 90 }}
-          >
-            Reset
-          </Button>
-        </Space>
-      </div>
-    ),
-    filterIcon: (filtered: boolean) => (
-      <SearchOutlined style={{ color: filtered ? '#1677ff' : undefined }} />
-    ),
-    onFilter: (value, record) => {
-      const val = accessor(record) || '';
-      return val.toLowerCase().includes((value as string).toLowerCase());
-    },
-  });
-
   const columns: TableProps<ScheduleTruck>['columns'] = [
+    {
+      title: 'Truck (No Pol)',
+      key: 'truck',
+      width: 170,
+      sorter: (a, b) => (a.truck?.noPol || '').localeCompare(b.truck?.noPol || ''),
+      ...getColumnSearchProps<ScheduleTruck>((r) => r.truck?.noPol || '', 'No Polisi'),
+      render: (_, r) => (
+        <Space size={6}>
+          <GoldenArrowAction
+            tooltip="Pilih / Detail Jadwal"
+            onClick={() => onSelectRow(r)}
+          />
+          <span className="font-mono font-bold text-[#4C6A85]">{r.truck?.noPol || '—'}</span>
+        </Space>
+      ),
+    },
     {
       title: 'Tanggal Jadwal',
       dataIndex: 'scheduleAt',
       key: 'scheduleAt',
       width: 140,
       sorter: (a, b) => new Date(a.scheduleAt).getTime() - new Date(b.scheduleAt).getTime(),
-      render: (text: string) => (text ? new Date(text).toLocaleDateString('id-ID') : '-'),
-    },
-    {
-      title: 'Truck (No Pol)',
-      key: 'truck',
-      width: 160,
-      ...getColumnSearchProps((r) => r.truck?.noPol || '', 'truck', 'No Polisi'),
-      render: (_, r) => <span className="font-mono font-bold text-blue-700">{r.truck?.noPol || '-'}</span>,
+      ...getColumnSearchProps<ScheduleTruck>(
+        (r) => (r.scheduleAt ? new Date(r.scheduleAt).toLocaleDateString('id-ID') : ''),
+        'Tanggal Jadwal'
+      ),
+      render: (text: string) => (text ? new Date(text).toLocaleDateString('id-ID') : '—'),
     },
     {
       title: 'Driver',
       key: 'driver',
       width: 160,
-      ...getColumnSearchProps((r) => r.driver?.name || '', 'driver', 'Driver'),
-      render: (_, r) => <span>{r.driver?.name || '-'}</span>,
+      sorter: (a, b) => (a.driver?.name || '').localeCompare(b.driver?.name || ''),
+      ...getColumnSearchProps<ScheduleTruck>((r) => r.driver?.name || '', 'Driver'),
+      render: (_, r) => <span className="font-medium text-[#293241]">{r.driver?.name || '—'}</span>,
     },
     {
       title: 'Cycle',
@@ -116,15 +80,19 @@ export default function DataTable({
       key: 'cycle',
       width: 100,
       align: 'center',
-      render: (val: number) => <Tag color="blue">Cycle {val ?? 1}</Tag>,
+      render: (val: number) => <Tag color="geekblue">Cycle {val ?? 1}</Tag>,
     },
     {
       title: 'Tujuan (Customer)',
       key: 'customers',
+      ...getColumnSearchProps<ScheduleTruck>(
+        (r) => (r.customers || []).map((c) => c.customer?.name).filter(Boolean).join(', '),
+        'Customer'
+      ),
       render: (_, r) => (
         <Space wrap size={[0, 4]}>
           {(r.customers || []).map((c, idx) => (
-            <Tag key={idx} color="geekblue">
+            <Tag key={idx} color="default">
               {c.customer?.name}
             </Tag>
           ))}
@@ -143,7 +111,7 @@ export default function DataTable({
             <Button
               type="text"
               size="small"
-              icon={<EditOutlined style={{ color: '#faad14' }} />}
+              icon={<EditOutlined style={{ color: '#d97706' }} />}
               onClick={(e) => {
                 e.stopPropagation();
                 onEdit(record);
@@ -154,7 +122,7 @@ export default function DataTable({
           {canDelete && (
             <Popconfirm
               title="Hapus jadwal?"
-              description="Yakin ingin menghapus jadwal ini?"
+              description="Yakin ingin menghapus jadwal truk ini?"
               okText="Hapus"
               okButtonProps={{ danger: true }}
               cancelText="Batal"
@@ -182,10 +150,12 @@ export default function DataTable({
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       <Table<ScheduleTruck>
         size="small"
+        className="small-table"
         rowKey="id"
         columns={columns}
         dataSource={data}
         loading={loading}
+        rowClassName={(record) => (selectedKey === record.id ? 'ant-table-row-selected' : '')}
         rowSelection={{
           type: 'radio',
           selectedRowKeys: selectedKey ? [selectedKey] : [],
@@ -208,8 +178,7 @@ export default function DataTable({
           showSizeChanger: true,
           showTotal: (total, range) => `${range[0]}-${range[1]} dari ${total} data`,
         }}
-        scroll={{ x: 1000, y: 'calc(100vh - 320px)' }}
-        className="border border-gray-200 rounded-lg overflow-hidden shadow-sm"
+        scroll={{ x: 1000, y: 'calc(100vh - 330px)' }}
       />
     </div>
   );

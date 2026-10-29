@@ -20,6 +20,7 @@ import { useVuteqSso } from '@vuteq/sso-client-react/react';
 import { bffRequest } from '@/src/lib/client-api';
 import ToolbarWrapper from '@/src/app/components/ToolbarWrapper';
 import ButtonToolbar from '@/src/app/components/ButtonToolbar';
+import { getColumnSearchProps } from '@/src/app/components/table/columnSearch';
 
 interface RoleItem {
   id: number;
@@ -120,6 +121,8 @@ export default function RolesConfigurationPage() {
       dataIndex: 'name',
       key: 'name',
       width: 150,
+      sorter: (a, b) => a.name.localeCompare(b.name),
+      ...getColumnSearchProps<RoleItem>('name', 'Role'),
       render: (name: string) => {
         const color = name === 'admin' ? 'purple' : 'default';
         return (
@@ -134,6 +137,7 @@ export default function RolesConfigurationPage() {
       dataIndex: 'description',
       key: 'description',
       width: 250,
+      ...getColumnSearchProps<RoleItem>('description', 'Deskripsi'),
       render: (text) => text || '-',
     },
     {
@@ -234,6 +238,7 @@ export default function RolesConfigurationPage() {
           dataSource={data}
           loading={loading}
           expandable={{ expandedRowRender, defaultExpandAllRows: true }}
+          rowClassName={(record) => (record.id === selectedItem?.id ? 'ant-table-row-selected' : '')}
           rowSelection={{
             type: 'radio',
             selectedRowKeys: selectedItem ? [selectedItem.id] : [],
@@ -252,7 +257,7 @@ export default function RolesConfigurationPage() {
           })}
           pagination={false}
           scroll={{ x: 800, y: 'calc(100vh - 320px)' }}
-          className="border border-gray-200 rounded-lg overflow-hidden shadow-sm"
+          className="small-table border border-[#D9DDDF] shadow-sm"
         />
       </div>
 

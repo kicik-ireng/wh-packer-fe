@@ -58,6 +58,9 @@ export default function PackingReportPage() {
   >([]);
   const [loadingPackingReqNo, setLoadingPackingReqNo] = useState(false);
   const [incomingDataList, setIncomingDataList] = useState<any[]>([]);
+  const [dandoriSchedule, setDandoriSchedule] = useState<any>(null);
+  const [checkingDandori, setCheckingDandori] = useState(false);
+  const [dandoriChecked, setDandoriChecked] = useState(false);
 
   const [form, setForm] = useState<FormState>({
     tanggalPacking: "",
@@ -85,6 +88,72 @@ export default function PackingReportPage() {
     qty4R: 0,
     qty2R: 0,
   });
+
+  // Validasi otomatis Schedule Dandori ketika Line dan Tanggal dipilih
+  useEffect(() => {
+    if (!form.lineNo || !form.tanggalPacking) {
+      setDandoriSchedule(null);
+      setDandoriChecked(false);
+      return;
+    }
+
+    const checkSchedule = async () => {
+      setCheckingDandori(true);
+      try {
+        const res = await fetch(
+          `http://10.10.10.5:5055/dandori-schedule/active-line?lineNo=${form.lineNo}&date=${form.tanggalPacking}`
+        );
+        if (res.ok) {
+          const schedule = await res.json();
+          if (schedule && schedule.id) {
+            setDandoriSchedule(schedule);
+            setDandoriChecked(true);
+
+            // Auto-fill dari Perintah Kerja Dandori
+            setForm((prev) => {
+              const updated = { ...prev };
+              if (schedule.type) updated.type = schedule.type;
+              if (schedule.pic1Id) updated.pic1 = schedule.pic1Id.toString();
+              if (schedule.pic2Id) updated.pic2 = schedule.pic2Id.toString();
+              if (schedule.pic3Id) updated.pic3 = schedule.pic3Id.toString();
+
+              if (updated.entries.length > 0) {
+                const first = { ...updated.entries[0] };
+                first.type = schedule.type || "2R";
+                first.customerPartNo = schedule.customerPartNo || "";
+                first.explannerNo = schedule.explannerNo || "";
+                first.qtyPlan = schedule.qtyPlan || 0;
+                first.balancePlanVsActual = Math.max(0, (schedule.qtyPlan || 0) - (schedule.qtyActual || 0));
+                if (!first.packingReqNo && schedule.packingReqNo) {
+                  first.packingReqNo = schedule.packingReqNo;
+                }
+                updated.entries[0] = first;
+              }
+
+              return updated;
+            });
+            toast.success(
+              `Perintah Kerja Dandori aktif untuk Line ${form.lineNo}! Target: ${schedule.qtyPlan} pcs`
+            );
+          } else {
+            setDandoriSchedule(null);
+            setDandoriChecked(true);
+          }
+        } else {
+          setDandoriSchedule(null);
+          setDandoriChecked(true);
+        }
+      } catch (err) {
+        console.error("Gagal cek schedule Dandori:", err);
+        setDandoriSchedule(null);
+        setDandoriChecked(true);
+      } finally {
+        setCheckingDandori(false);
+      }
+    };
+
+    checkSchedule();
+  }, [form.lineNo, form.tanggalPacking]);
 
   const fetchReportsData = useCallback(async () => {
     try {
@@ -405,6 +474,13 @@ export default function PackingReportPage() {
       return;
     }
 
+    if (!dandoriSchedule) {
+      toast.error(
+        `❌ Line ${form.lineNo} belum memiliki Perintah Kerja dari Dandori. Operator tidak dapat input packing!`
+      );
+      return;
+    }
+
     const invalidMenit = form.entries.filter((e) => e.menitPacking === 0);
     if (invalidMenit.length > 0) {
       toast.error(`⚠️ Isi Jam Mulai dan Jam Selesai dengan benar!`);
@@ -453,9 +529,12 @@ export default function PackingReportPage() {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error("Gagal simpan ke API");
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.message || "Gagal simpan ke API");
+      }
 
-      toast.success("Data berhasil disimpan");
+      toast.success("Data packing berhasil disimpan & progres Line diperbarui!");
       await fetchReportsData();
 
       setForm({
@@ -597,6 +676,63 @@ export default function PackingReportPage() {
                 </select>
               </div>
             </div>
+
+            {/* DANDORI SCHEDULE STATUS & GUARD BANNER */}
+            {form.lineNo && (
+              <div className="mt-3">
+                {checkingDandori ? (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs rounded flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
+                    <span>Memeriksa Perintah Kerja Dandori untuk Line {form.lineNo}...</span>
+                  </div>
+                ) : !dandoriSchedule ? (
+                  <div className="p-4 bg-red-50 dark:bg-red-950/30 border-2 border-red-500 rounded-lg text-red-700 dark:text-red-400 shadow-sm animate-pulse">
+                    <div className="flex items-center gap-2 font-bold text-sm mb-1">
+                      <HiOutlineExclamationCircle className="text-xl text-red-600" />
+                      <span>AKSES INPUT DIBLOKIR: BELUM ADA SCHEDULE DANDORI</span>
+                    </div>
+                    <p className="text-xs">
+                      Line <strong>{form.lineNo}</strong> belum memiliki Perintah Kerja / Schedule dari Dandori untuk tanggal <strong>{form.tanggalPacking}</strong>.
+                    </p>
+                    <p className="text-[11px] text-red-600 dark:text-red-400 mt-1 font-semibold">
+                      ⛔ Operator tidak dapat input packing sebelum Dandori membagikan jadwal & MP untuk Line ini.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-500 rounded-lg text-emerald-800 dark:text-emerald-300 shadow-sm">
+                    <div className="flex items-center justify-between font-bold text-xs mb-1.5 border-b border-emerald-200 dark:border-emerald-800/50 pb-1">
+                      <span className="flex items-center gap-1.5">
+                        <HiClipboardCheck className="text-base text-emerald-600" />
+                        PERINTAH KERJA AKTIF DARI DANDORI (LINE 0{form.lineNo})
+                      </span>
+                      <span className="px-2 py-0.5 bg-emerald-200 dark:bg-emerald-800 text-emerald-900 dark:text-emerald-100 rounded text-[10px] font-bold">
+                        {dandoriSchedule.shift || "Shift 1"} | TIPE: {dandoriSchedule.type}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs bg-white/70 dark:bg-gray-800/70 p-2 rounded">
+                      <div>
+                        <span className="text-gray-500 block text-[10px] uppercase font-semibold">No PR:</span>
+                        <strong className="text-gray-900 dark:text-white font-mono">{dandoriSchedule.packingReqNo}</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block text-[10px] uppercase font-semibold">Model / Part:</span>
+                        <strong className="text-gray-900 dark:text-white truncate block">{dandoriSchedule.model || "-"} ({dandoriSchedule.customerPartNo || "-"})</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block text-[10px] uppercase font-semibold">Target Dandori:</span>
+                        <strong className="text-blue-600 font-bold">{dandoriSchedule.qtyPlan} pcs</strong> (Tercapai: {dandoriSchedule.qtyActual} pcs)
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block text-[10px] uppercase font-semibold">MP Ditugaskan:</span>
+                        <strong className="text-gray-900 dark:text-white truncate block">
+                          {[dandoriSchedule.pic1?.name, dandoriSchedule.pic2?.name, dandoriSchedule.pic3?.name].filter(Boolean).join(", ") || "Belum ada"}
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </section>
 
           {/* Manpower / PIC Card */}
@@ -876,10 +1012,21 @@ export default function PackingReportPage() {
             <button
               type="button"
               onClick={handleSubmit}
-              className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-3.5 rounded-none font-semibold hover:bg-blue-700 focus:ring-4 focus:ring-blue-500/20 active:scale-[0.98] transition-all"
+              disabled={!dandoriSchedule || checkingDandori}
+              className={`w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-none font-semibold transition-all ${
+                !dandoriSchedule || checkingDandori
+                  ? "bg-gray-400 text-gray-200 cursor-not-allowed opacity-60"
+                  : "bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98] shadow-md"
+              }`}
             >
               <HiOutlineSave className="text-xl" />
-              Simpan Laporan
+              {!form.lineNo
+                ? "Pilih Line & Jadwal"
+                : checkingDandori
+                ? "Memeriksa Schedule..."
+                : !dandoriSchedule
+                ? "Menunggu Schedule Dandori"
+                : "Simpan Laporan"}
             </button>
           </section>
         </div>

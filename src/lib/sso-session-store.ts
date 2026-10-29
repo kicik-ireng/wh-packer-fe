@@ -6,18 +6,27 @@ import { MemorySessionStore, type SessionStore, type StoredSession } from '@vute
 const PREFIX = `${process.env.VUTEQ_SSO_REDIS_KEY_PREFIX ?? ''}exedy:sso:`;
 const LOCK_PREFIX = `${PREFIX}lock:`;
 const GLOBAL_KEY = '__exedyVuteqSsoRedis';
+const GLOBAL_FALLBACK_KEY = '__exedyVuteqSsoFallbackStore';
+const GLOBAL_REDIS_STATUS_KEY = '__exedyVuteqSsoRedisStatus';
 const LOCK_ACQUIRE_TIMEOUT_MS = 5_000;
 const LOCK_LEASE_MS = 30_000;
 const LOCK_RETRY_MS = 50;
 
-const fallbackStore = new MemorySessionStore();
-let redisAvailable: boolean | null = null;
+const globalScope = globalThis as typeof globalThis & {
+  [GLOBAL_KEY]?: Redis;
+  [GLOBAL_FALLBACK_KEY]?: MemorySessionStore;
+  [GLOBAL_REDIS_STATUS_KEY]?: boolean;
+};
+
+if (!globalScope[GLOBAL_FALLBACK_KEY]) {
+  globalScope[GLOBAL_FALLBACK_KEY] = new MemorySessionStore();
+}
+const fallbackStore: MemorySessionStore = globalScope[GLOBAL_FALLBACK_KEY]!;
 
 function redisClient(): Redis | null {
   if (process.env.REDIS_ENABLED === 'false') return null;
-  const globalStore = globalThis as typeof globalThis & { [GLOBAL_KEY]?: Redis };
 
-  if (!globalStore[GLOBAL_KEY]) {
+  if (!globalScope[GLOBAL_KEY]) {
     try {
       const client = new Redis({
         host: process.env.REDIS_HOST ?? 'localhost',
@@ -29,20 +38,20 @@ function redisClient(): Redis | null {
         enableReadyCheck: true,
         retryStrategy: () => null, // don't hang if redis is not running
       });
-      client.on('error', (err) => {
-        redisAvailable = false;
+      client.on('error', () => {
+        globalScope[GLOBAL_REDIS_STATUS_KEY] = false;
       });
       client.on('connect', () => {
-        redisAvailable = true;
+        globalScope[GLOBAL_REDIS_STATUS_KEY] = true;
       });
-      globalStore[GLOBAL_KEY] = client;
+      globalScope[GLOBAL_KEY] = client;
     } catch {
-      redisAvailable = false;
+      globalScope[GLOBAL_REDIS_STATUS_KEY] = false;
       return null;
     }
   }
 
-  return globalStore[GLOBAL_KEY] ?? null;
+  return globalScope[GLOBAL_KEY] ?? null;
 }
 
 const entryKey = (key: string): string => `${PREFIX}entry:${key}`;
@@ -61,12 +70,14 @@ async function parseStoredSession(redis: Redis, key: string, value: string): Pro
   }
 }
 
+function isRedisReady(): boolean {
+  return redisClient() !== null && globalScope[GLOBAL_REDIS_STATUS_KEY] !== false;
+}
+
 const store: SessionStore = {
   async get(key) {
-    const redis = redisClient();
-    if (!redis || redisAvailable === false) {
-      return fallbackStore.get(key);
-    }
+    if (!isRedisReady()) return fallbackStore.get(key);
+    const redis = redisClient()!;
     try {
       const storageKey = entryKey(key);
       const value = await redis.get(storageKey);
@@ -77,11 +88,11 @@ const store: SessionStore = {
   },
 
   async set(key, session) {
-    const redis = redisClient();
-    if (!redis || redisAvailable === false) {
+    if (!isRedisReady()) {
       await fallbackStore.set(key, session);
       return;
     }
+    const redis = redisClient()!;
     try {
       const ttl = Math.max(1, session.expiresAt - Date.now());
       await redis.set(entryKey(key), JSON.stringify(session), 'PX', ttl);
@@ -91,10 +102,8 @@ const store: SessionStore = {
   },
 
   async take(key) {
-    const redis = redisClient();
-    if (!redis || redisAvailable === false) {
-      return fallbackStore.take(key);
-    }
+    if (!isRedisReady()) return fallbackStore.take(key);
+    const redis = redisClient()!;
     try {
       const storageKey = entryKey(key);
       const value = (await redis.eval(
@@ -109,11 +118,11 @@ const store: SessionStore = {
   },
 
   async delete(key) {
-    const redis = redisClient();
-    if (!redis || redisAvailable === false) {
+    if (!isRedisReady()) {
       await fallbackStore.delete(key);
       return;
     }
+    const redis = redisClient()!;
     try {
       await redis.del(entryKey(key));
     } catch {
@@ -122,10 +131,8 @@ const store: SessionStore = {
   },
 
   async deleteMatching(clientId, subject, sid) {
-    const redis = redisClient();
-    if (!redis || redisAvailable === false) {
-      return fallbackStore.deleteMatching(clientId, subject, sid);
-    }
+    if (!isRedisReady()) return fallbackStore.deleteMatching(clientId, subject, sid);
+    const redis = redisClient()!;
     try {
       let cursor = '0';
       let deleted = 0;
@@ -154,10 +161,8 @@ const store: SessionStore = {
   },
 
   async withLock(key, operation) {
-    const redis = redisClient();
-    if (!redis || redisAvailable === false) {
-      return fallbackStore.withLock(key, operation);
-    }
+    if (!isRedisReady()) return fallbackStore.withLock(key, operation);
+    const redis = redisClient()!;
     try {
       const lockKey = `${LOCK_PREFIX}${key}`;
       const owner = randomUUID();

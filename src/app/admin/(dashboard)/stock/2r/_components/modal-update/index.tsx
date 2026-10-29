@@ -39,7 +39,7 @@ export default function ModalUpdate({ open, data, onCancel, onSuccess }: ModalUp
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            partId: data.part2r.id,
+            partId: data.part2r?.id || data.part2rId,
             newQty: values.totalStock,
           }),
         });

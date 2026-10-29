@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Table, Input, Button, Space, Popconfirm } from 'antd';
-import type { TableProps, ColumnType } from 'antd/es/table';
-import { SearchOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import React from 'react';
+import { Table, Button, Space, Popconfirm } from 'antd';
+import type { TableProps } from 'antd/es/table';
+import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { getColumnSearchProps } from '@/src/app/components/table/columnSearch';
+import GoldenArrowAction from '@/src/app/components/GoldenArrowAction';
 
 export interface Customer {
   id: number;
@@ -32,77 +34,36 @@ export default function DataTable({
   canUpdate,
   canDelete,
 }: DataTableProps) {
-  const [searchText, setSearchText] = useState<{ [key: string]: string }>({});
-
-  const getColumnSearchProps = (dataIndex: keyof Customer, title: string): ColumnType<Customer> => ({
-    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
-      <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
-        <Input
-          placeholder={`Cari ${title}`}
-          value={selectedKeys[0]}
-          onChange={(e) => {
-            setSelectedKeys(e.target.value ? [e.target.value] : []);
-            setSearchText((prev) => ({ ...prev, [dataIndex]: e.target.value }));
-          }}
-          onPressEnter={() => confirm()}
-          style={{ marginBottom: 8, display: 'block' }}
-        />
-        <Space>
-          <Button
-            type="primary"
-            onClick={() => confirm()}
-            icon={<SearchOutlined />}
-            size="small"
-            style={{ width: 90 }}
-          >
-            Cari
-          </Button>
-          <Button
-            onClick={() => {
-              clearFilters?.();
-              setSearchText((prev) => ({ ...prev, [dataIndex]: '' }));
-              confirm();
-            }}
-            size="small"
-            style={{ width: 90 }}
-          >
-            Reset
-          </Button>
-        </Space>
-      </div>
-    ),
-    filterIcon: (filtered: boolean) => (
-      <SearchOutlined style={{ color: filtered ? '#1677ff' : undefined }} />
-    ),
-    onFilter: (value, record) =>
-      Boolean(
-        record[dataIndex]
-          ? record[dataIndex]!.toString().toLowerCase().includes((value as string).toLowerCase())
-          : false,
-      ),
-  });
-
   const columns: TableProps<Customer>['columns'] = [
     {
       title: 'Nama Customer',
       dataIndex: 'name',
       key: 'name',
-      width: 250,
+      width: 260,
       sorter: (a, b) => a.name.localeCompare(b.name),
-      ...getColumnSearchProps('name', 'Nama Customer'),
-      render: (text) => <span className="font-semibold text-blue-700">{text}</span>,
+      ...getColumnSearchProps<Customer>('name', 'Nama Customer'),
+      render: (text, record) => (
+        <Space size={6}>
+          <GoldenArrowAction
+            tooltip="Pilih / Detail Customer"
+            onClick={() => onSelectRow(record)}
+          />
+          <span className="font-semibold text-[#293241]">{text}</span>
+        </Space>
+      ),
     },
     {
       title: 'Alamat',
       dataIndex: 'address',
       key: 'address',
-      ...getColumnSearchProps('address', 'Alamat'),
+      sorter: (a, b) => (a.address || '').localeCompare(b.address || ''),
+      ...getColumnSearchProps<Customer>('address', 'Alamat'),
       render: (text) => text || '—',
     },
     {
       title: 'Aksi',
       key: 'actions',
-      width: 120,
+      width: 110,
       align: 'center',
       render: (_, record) => (
         <Space size="small">
@@ -110,7 +71,7 @@ export default function DataTable({
             <Button
               type="text"
               size="small"
-              icon={<EditOutlined style={{ color: '#faad14' }} />}
+              icon={<EditOutlined style={{ color: '#d97706' }} />}
               onClick={(e) => {
                 e.stopPropagation();
                 onEdit(record);
@@ -149,10 +110,12 @@ export default function DataTable({
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       <Table<Customer>
         size="small"
+        className="small-table"
         rowKey="id"
         columns={columns}
         dataSource={data}
         loading={loading}
+        rowClassName={(record) => (selectedKey === record.id ? 'ant-table-row-selected' : '')}
         rowSelection={{
           type: 'radio',
           selectedRowKeys: selectedKey ? [selectedKey] : [],
@@ -175,8 +138,7 @@ export default function DataTable({
           showSizeChanger: true,
           showTotal: (total, range) => `${range[0]}-${range[1]} dari ${total} data`,
         }}
-        scroll={{ x: 'max-content', y: 'calc(100vh - 320px)' }}
-        className="border border-gray-200 rounded-lg overflow-hidden shadow-sm"
+        scroll={{ x: 'max-content', y: 'calc(100vh - 330px)' }}
       />
     </div>
   );

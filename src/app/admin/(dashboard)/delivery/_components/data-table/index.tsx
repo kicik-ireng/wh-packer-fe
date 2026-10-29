@@ -1,14 +1,15 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Table, Input, Button, Space, Popconfirm, Tag, Tooltip } from 'antd';
-import type { TableProps, ColumnType } from 'antd/es/table';
+import React from 'react';
+import { Table, Button, Space, Popconfirm, Tag, Tooltip } from 'antd';
+import type { TableProps } from 'antd/es/table';
 import {
-  SearchOutlined,
   EditOutlined,
   DeleteOutlined,
   UserOutlined,
 } from '@ant-design/icons';
+import { getColumnSearchProps } from '@/src/app/components/table/columnSearch';
+import GoldenArrowAction from '@/src/app/components/GoldenArrowAction';
 
 export interface DeliveryItem {
   id: number;
@@ -66,67 +67,23 @@ export default function DataTable({
   canUpdate,
   canDelete,
 }: DataTableProps) {
-  const [searchText, setSearchText] = useState<{ [key: string]: string }>({});
-
-  const getColumnSearchProps = (
-    accessor: (record: DeliveryOrder) => string,
-    key: string,
-    title: string,
-  ): ColumnType<DeliveryOrder> => ({
-    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
-      <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
-        <Input
-          placeholder={`Cari ${title}`}
-          value={selectedKeys[0]}
-          onChange={(e) => {
-            setSelectedKeys(e.target.value ? [e.target.value] : []);
-            setSearchText((prev) => ({ ...prev, [key]: e.target.value }));
-          }}
-          onPressEnter={() => confirm()}
-          style={{ marginBottom: 8, display: 'block' }}
-        />
-        <Space>
-          <Button
-            type="primary"
-            onClick={() => confirm()}
-            icon={<SearchOutlined />}
-            size="small"
-            style={{ width: 90 }}
-          >
-            Cari
-          </Button>
-          <Button
-            onClick={() => {
-              clearFilters?.();
-              setSearchText((prev) => ({ ...prev, [key]: '' }));
-              confirm();
-            }}
-            size="small"
-            style={{ width: 90 }}
-          >
-            Reset
-          </Button>
-        </Space>
-      </div>
-    ),
-    filterIcon: (filtered: boolean) => (
-      <SearchOutlined style={{ color: filtered ? '#1677ff' : undefined }} />
-    ),
-    onFilter: (value, record) => {
-      const val = accessor(record) || '';
-      return val.toLowerCase().includes((value as string).toLowerCase());
-    },
-  });
-
   const columns: TableProps<DeliveryOrder>['columns'] = [
     {
       title: 'Nomor DO',
       dataIndex: 'noDo',
       key: 'noDo',
-      width: 170,
+      width: 180,
       sorter: (a, b) => (a.noDo || '').localeCompare(b.noDo || ''),
-      ...getColumnSearchProps((r) => r.noDo, 'noDo', 'No DO'),
-      render: (text) => <span className="font-mono font-bold text-blue-700">{text}</span>,
+      ...getColumnSearchProps<DeliveryOrder>('noDo', 'No DO'),
+      render: (text, record) => (
+        <Space size={6}>
+          <GoldenArrowAction
+            tooltip="Pilih / Detail DO"
+            onClick={() => onSelectRow(record)}
+          />
+          <span className="font-mono font-bold text-[#4C6A85]">{text}</span>
+        </Space>
+      ),
     },
     {
       title: 'Tanggal Kirim',
@@ -134,27 +91,34 @@ export default function DataTable({
       key: 'date',
       width: 130,
       sorter: (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
-      render: (text: string) => (text ? new Date(text).toLocaleDateString('id-ID') : '-'),
+      ...getColumnSearchProps<DeliveryOrder>(
+        (r) => (r.date ? new Date(r.date).toLocaleDateString('id-ID') : ''),
+        'Tanggal Kirim'
+      ),
+      render: (text: string) => (text ? new Date(text).toLocaleDateString('id-ID') : '—'),
     },
     {
       title: 'Customer',
       key: 'customer',
       width: 160,
-      ...getColumnSearchProps((r) => r.customer?.name || '', 'customer', 'Customer'),
-      render: (_, r) => <Tag color="blue">{r.customer?.name || '-'}</Tag>,
+      sorter: (a, b) => (a.customer?.name || '').localeCompare(b.customer?.name || ''),
+      ...getColumnSearchProps<DeliveryOrder>((r) => r.customer?.name || '', 'Customer'),
+      render: (_, r) => <Tag color="geekblue">{r.customer?.name || '—'}</Tag>,
     },
     {
       title: 'Driver',
       key: 'driver',
       width: 160,
-      ...getColumnSearchProps((r) => r.driver?.name || '', 'driver', 'Driver'),
-      render: (_, r) => <span>{r.driver?.name || '-'}</span>,
+      sorter: (a, b) => (a.driver?.name || '').localeCompare(b.driver?.name || ''),
+      ...getColumnSearchProps<DeliveryOrder>((r) => r.driver?.name || '', 'Driver'),
+      render: (_, r) => <span className="font-medium text-[#293241]">{r.driver?.name || '—'}</span>,
     },
     {
       title: 'Total Items',
       key: 'itemsCount',
-      width: 100,
+      width: 110,
       align: 'center',
+      sorter: (a, b) => (a.items?.length || 0) - (b.items?.length || 0),
       render: (_, r) => <span className="font-semibold">{r.items?.length || 0} part</span>,
     },
     {
@@ -170,7 +134,7 @@ export default function DataTable({
               <Button
                 type="text"
                 size="small"
-                icon={<UserOutlined style={{ color: '#1677ff' }} />}
+                icon={<UserOutlined style={{ color: '#4F46E5' }} />}
                 onClick={(e) => {
                   e.stopPropagation();
                   onChangeDriver(record);
@@ -212,7 +176,7 @@ export default function DataTable({
         key: 'type',
         width: 80,
         render: (_: any, item: DeliveryItem) =>
-          item.part2r ? <Tag color="cyan">2R</Tag> : <Tag color="magenta">4R</Tag>,
+          item.part2r ? <Tag color="geekblue">2R</Tag> : <Tag color="default">4R</Tag>,
       },
       {
         title: 'Model / Part Name',
@@ -221,7 +185,7 @@ export default function DataTable({
           const p = item.part2r || item.part4r;
           return (
             <div>
-              <span className="font-semibold text-gray-800">{p?.model || '-'}</span>
+              <span className="font-semibold text-[#293241]">{p?.model || '—'}</span>
               <div className="text-xs text-gray-500">
                 {item.part2r ? item.part2r.emiPartName : (item.part4r as any)?.kppNp || ''}
               </div>
@@ -243,7 +207,7 @@ export default function DataTable({
         key: 'qtyDelivered',
         width: 120,
         align: 'right' as const,
-        render: (val: number) => <span className="font-bold text-blue-600">{val?.toLocaleString('id-ID')}</span>,
+        render: (val: number) => <span className="font-bold text-[#4F46E5]">{val?.toLocaleString('id-ID')}</span>,
       },
       {
         title: 'Aksi Item',
@@ -256,7 +220,7 @@ export default function DataTable({
               <Button
                 type="text"
                 size="small"
-                icon={<EditOutlined style={{ color: '#faad14' }} />}
+                icon={<EditOutlined style={{ color: '#d97706' }} />}
                 onClick={() => onEditItem(item)}
                 title="Edit Qty"
               />
@@ -280,6 +244,7 @@ export default function DataTable({
     return (
       <Table
         size="small"
+        className="small-table"
         columns={itemColumns}
         dataSource={record.items}
         rowKey="id"
@@ -292,11 +257,13 @@ export default function DataTable({
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       <Table<DeliveryOrder>
         size="small"
+        className="small-table"
         rowKey="id"
         columns={columns}
         dataSource={data}
         loading={loading}
         expandable={{ expandedRowRender, defaultExpandAllRows: false }}
+        rowClassName={(record) => (selectedKey === record.id ? 'ant-table-row-selected' : '')}
         rowSelection={{
           type: 'radio',
           selectedRowKeys: selectedKey ? [selectedKey] : [],
@@ -316,8 +283,7 @@ export default function DataTable({
           showSizeChanger: true,
           showTotal: (total, range) => `${range[0]}-${range[1]} dari ${total} data`,
         }}
-        scroll={{ x: 1200, y: 'calc(100vh - 320px)' }}
-        className="border border-gray-200 rounded-lg overflow-hidden shadow-sm"
+        scroll={{ x: 1200, y: 'calc(100vh - 330px)' }}
       />
     </div>
   );

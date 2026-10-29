@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Table, Input, Button, Space, Tag } from 'antd';
-import type { TableProps, ColumnType } from 'antd/es/table';
-import { SearchOutlined } from '@ant-design/icons';
+import { Table, Button, Tag } from 'antd';
+import type { TableProps } from 'antd/es/table';
+import { FileTextOutlined } from '@ant-design/icons';
+import { getColumnSearchProps } from '@/src/app/components/table/columnSearch';
 
 export interface StockTransaction {
   id: number;
@@ -24,60 +25,11 @@ export interface StockTransaction {
 interface DataTableProps {
   data: StockTransaction[];
   loading: boolean;
+  onViewCard?: (record: StockTransaction) => void;
 }
 
-export default function DataTable({ data, loading }: DataTableProps) {
-  const [searchText, setSearchText] = useState<{ [key: string]: string }>({});
-
-  const getColumnSearchProps = (
-    accessor: (record: StockTransaction) => string,
-    key: string,
-    title: string,
-  ): ColumnType<StockTransaction> => ({
-    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
-      <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
-        <Input
-          placeholder={`Cari ${title}`}
-          value={selectedKeys[0]}
-          onChange={(e) => {
-            setSelectedKeys(e.target.value ? [e.target.value] : []);
-            setSearchText((prev) => ({ ...prev, [key]: e.target.value }));
-          }}
-          onPressEnter={() => confirm()}
-          style={{ marginBottom: 8, display: 'block' }}
-        />
-        <Space>
-          <Button
-            type="primary"
-            onClick={() => confirm()}
-            icon={<SearchOutlined />}
-            size="small"
-            style={{ width: 90 }}
-          >
-            Cari
-          </Button>
-          <Button
-            onClick={() => {
-              clearFilters?.();
-              setSearchText((prev) => ({ ...prev, [key]: '' }));
-              confirm();
-            }}
-            size="small"
-            style={{ width: 90 }}
-          >
-            Reset
-          </Button>
-        </Space>
-      </div>
-    ),
-    filterIcon: (filtered: boolean) => (
-      <SearchOutlined style={{ color: filtered ? '#1677ff' : undefined }} />
-    ),
-    onFilter: (value, record) => {
-      const val = accessor(record) || '';
-      return val.toLowerCase().includes((value as string).toLowerCase());
-    },
-  });
+export default function DataTable({ data, loading, onViewCard }: DataTableProps) {
+  const [selectedRowKey, setSelectedRowKey] = useState<React.Key | null>(null);
 
   const columns: TableProps<StockTransaction>['columns'] = [
     {
@@ -93,15 +45,15 @@ export default function DataTable({ data, loading }: DataTableProps) {
       title: 'Tipe & Part',
       key: 'part',
       width: 220,
-      ...getColumnSearchProps(
-        (r) =>
+      ...getColumnSearchProps<StockTransaction>(
+        'part',
+        'Part / Model',
+        (r: StockTransaction) =>
           r.part2r
             ? `2R ${r.part2r.model || ''} ${r.part2r.oeNo || ''} ${r.part2r.emiPartName || ''}`
             : r.part4r
             ? `4R ${r.part4r.model || ''} ${r.part4r.oeNo || ''}`
             : '',
-        'part',
-        'Part / Model',
       ),
       render: (_, record) => {
         if (record.part2r) {
@@ -174,7 +126,7 @@ export default function DataTable({ data, loading }: DataTableProps) {
       dataIndex: 'pic',
       key: 'pic',
       width: 120,
-      ...getColumnSearchProps((r) => r.pic || '', 'pic', 'PIC'),
+      ...getColumnSearchProps<StockTransaction>('pic', 'PIC', (r: StockTransaction) => r.pic || ''),
       render: (pic: string) => pic || '-',
     },
     {
@@ -182,7 +134,7 @@ export default function DataTable({ data, loading }: DataTableProps) {
       dataIndex: 'reference',
       key: 'reference',
       width: 160,
-      ...getColumnSearchProps((r) => r.reference || '', 'reference', 'Referensi'),
+      ...getColumnSearchProps<StockTransaction>('reference', 'Referensi', (r: StockTransaction) => r.reference || ''),
       render: (ref: string) => (ref ? <Tag color="blue">{ref}</Tag> : '-'),
     },
     {
@@ -190,7 +142,33 @@ export default function DataTable({ data, loading }: DataTableProps) {
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
+      ...getColumnSearchProps<StockTransaction>('description', 'Keterangan', (r: StockTransaction) => r.description || ''),
       render: (desc: string) => desc || '-',
+    },
+    {
+      title: 'Aksi',
+      key: 'actions',
+      width: 90,
+      fixed: 'right',
+      align: 'center',
+      render: (_, record) => {
+        const hasPart = record.part2rId || record.part4rId;
+        if (!hasPart) return '-';
+        return (
+          <Button
+            type="primary"
+            size="small"
+            style={{ backgroundColor: '#4F46E5', borderColor: '#4F46E5', fontSize: '11px' }}
+            icon={<FileTextOutlined />}
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewCard?.(record);
+            }}
+          >
+            Kartu
+          </Button>
+        );
+      },
     },
   ];
 
@@ -202,6 +180,13 @@ export default function DataTable({ data, loading }: DataTableProps) {
         columns={columns}
         dataSource={data}
         loading={loading}
+        rowClassName={(record) => (record.id === selectedRowKey ? 'ant-table-row-selected' : '')}
+        onRow={(record) => ({
+          onClick: () => {
+            setSelectedRowKey((prev) => (prev === record.id ? null : record.id));
+          },
+          style: { cursor: 'pointer' },
+        })}
         pagination={{
           defaultPageSize: 15,
           pageSizeOptions: ['15', '30', '50', '100'],
@@ -209,7 +194,7 @@ export default function DataTable({ data, loading }: DataTableProps) {
           showTotal: (total, range) => `${range[0]}-${range[1]} dari ${total} data`,
         }}
         scroll={{ x: 1200, y: 'calc(100vh - 320px)' }}
-        className="border border-gray-200 rounded-lg overflow-hidden shadow-sm"
+        className="small-table border border-[#D9DDDF] shadow-sm"
       />
     </div>
   );

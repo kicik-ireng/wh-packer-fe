@@ -7,6 +7,7 @@ import {
   EditOutlined,
   UploadOutlined,
   DownloadOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import { useVuteqSso } from '@vuteq/sso-client-react/react';
 import { bffRequest } from '@/src/lib/client-api';
@@ -16,6 +17,7 @@ import ButtonToolbar from '@/src/app/components/ButtonToolbar';
 import DataTable, { type Stock2R } from './_components/data-table';
 import ModalUpdate from './_components/modal-update';
 import ModalImport from './_components/modal-import';
+import ModalStockCard from '@/src/app/components/ModalStockCard';
 
 export default function Stock2RPage() {
   const [data, setData] = useState<Stock2R[]>([]);
@@ -23,6 +25,8 @@ export default function Stock2RPage() {
   const [selectedItem, setSelectedItem] = useState<Stock2R | undefined>(undefined);
   const [openUpdate, setOpenUpdate] = useState(false);
   const [openImport, setOpenImport] = useState(false);
+  const [openStockCard, setOpenStockCard] = useState(false);
+  const [cardPart, setCardPart] = useState<{ id: number; name: string } | null>(null);
 
   const { session } = useVuteqSso();
   const userRole = (session?.roles?.[0] as string) || (session?.attributes?.RoleName as string) || 'none';
@@ -89,6 +93,21 @@ export default function Stock2RPage() {
             loading={loading}
           />
           <ButtonToolbar
+            title="Kartu Stok"
+            icon={<FileTextOutlined />}
+            onClick={() => {
+              const partId = selectedItem?.part2r?.id || selectedItem?.part2rId;
+              if (partId && selectedItem) {
+                setCardPart({
+                  id: partId,
+                  name: `${selectedItem.part2r?.model || ''} - ${selectedItem.part2r?.oeNo || selectedItem.part2r?.assyNo16 || ''}`,
+                });
+                setOpenStockCard(true);
+              }
+            }}
+            enable={Boolean(selectedItem)}
+          />
+          <ButtonToolbar
             title="Edit Stock / Rak"
             icon={<EditOutlined />}
             onClick={() => selectedItem && setOpenUpdate(true)}
@@ -119,6 +138,17 @@ export default function Stock2RPage() {
           setSelectedItem(item);
           setOpenUpdate(true);
         }}
+        onViewCard={(item) => {
+          const partId = item?.part2r?.id || item?.part2rId;
+          if (partId) {
+            setSelectedItem(item);
+            setCardPart({
+              id: partId,
+              name: `${item.part2r?.model || ''} - ${item.part2r?.oeNo || item.part2r?.assyNo16 || ''}`,
+            });
+            setOpenStockCard(true);
+          }
+        }}
         canUpdate={canUpdate}
       />
 
@@ -140,6 +170,14 @@ export default function Stock2RPage() {
           setOpenImport(false);
           fetchData();
         }}
+      />
+
+      <ModalStockCard
+        open={openStockCard}
+        onClose={() => setOpenStockCard(false)}
+        type="2r"
+        partId={cardPart?.id}
+        partName={cardPart?.name}
       />
     </div>
   );

@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Table, Input, Button, Space, Popconfirm, Tag } from 'antd';
-import type { TableProps, ColumnType } from 'antd/es/table';
-import { SearchOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import React from 'react';
+import { Table, Button, Space, Popconfirm, Tag } from 'antd';
+import type { TableProps } from 'antd/es/table';
+import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { getColumnSearchProps } from '@/src/app/components/table/columnSearch';
+import GoldenArrowAction from '@/src/app/components/GoldenArrowAction';
 
 export interface ProductionProblem {
   id: number;
@@ -42,78 +44,52 @@ export default function DataTable({
   canDelete,
   manpowerList,
 }: DataTableProps) {
-  const [searchText, setSearchText] = useState<{ [key: string]: string }>({});
-
   const getManpowerName = (nik: string) => {
     const found = manpowerList.find((mp) => mp.nik === nik);
     return found ? found.name : nik;
   };
 
-  const getColumnSearchProps = (
-    accessor: (record: ProductionProblem) => string,
-    key: string,
-    title: string,
-  ): ColumnType<ProductionProblem> => ({
-    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
-      <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
-        <Input
-          placeholder={`Cari ${title}`}
-          value={selectedKeys[0]}
-          onChange={(e) => {
-            setSelectedKeys(e.target.value ? [e.target.value] : []);
-            setSearchText((prev) => ({ ...prev, [key]: e.target.value }));
-          }}
-          onPressEnter={() => confirm()}
-          style={{ marginBottom: 8, display: 'block' }}
-        />
-        <Space>
-          <Button
-            type="primary"
-            onClick={() => confirm()}
-            icon={<SearchOutlined />}
-            size="small"
-            style={{ width: 90 }}
-          >
-            Cari
-          </Button>
-          <Button
-            onClick={() => {
-              clearFilters?.();
-              setSearchText((prev) => ({ ...prev, [key]: '' }));
-              confirm();
-            }}
-            size="small"
-            style={{ width: 90 }}
-          >
-            Reset
-          </Button>
-        </Space>
-      </div>
-    ),
-    filterIcon: (filtered: boolean) => (
-      <SearchOutlined style={{ color: filtered ? '#1677ff' : undefined }} />
-    ),
-    onFilter: (value, record) => {
-      const val = accessor(record) || '';
-      return val.toLowerCase().includes((value as string).toLowerCase());
-    },
-  });
-
   const columns: TableProps<ProductionProblem>['columns'] = [
+    {
+      title: 'Problem Item',
+      dataIndex: 'problemItem',
+      key: 'problemItem',
+      width: 220,
+      sorter: (a, b) => (a.problemItem || '').localeCompare(b.problemItem || ''),
+      ...getColumnSearchProps<ProductionProblem>('problemItem', 'Problem Item'),
+      render: (text, record) => (
+        <Space size={6}>
+          <GoldenArrowAction
+            tooltip="Pilih / Detail Problem"
+            onClick={() => onSelectRow(record)}
+          />
+          <span className="font-semibold text-[#293241]">{text}</span>
+        </Space>
+      ),
+    },
     {
       title: 'Tanggal',
       dataIndex: 'jamMulai',
       key: 'tanggal',
       width: 120,
-      render: (val: string) => (val ? new Date(val).toLocaleDateString('id-ID') : '-'),
+      sorter: (a, b) => new Date(a.jamMulai).getTime() - new Date(b.jamMulai).getTime(),
+      ...getColumnSearchProps<ProductionProblem>(
+        (r) => (r.jamMulai ? new Date(r.jamMulai).toLocaleDateString('id-ID') : ''),
+        'Tanggal'
+      ),
+      render: (val: string) => (val ? new Date(val).toLocaleDateString('id-ID') : '—'),
     },
     {
       title: 'Jam Mulai - Selesai',
       key: 'waktu',
       width: 150,
       render: (_, r) => {
-        const start = r.jamMulai ? new Date(r.jamMulai).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-';
-        const end = r.jamSelesai ? new Date(r.jamSelesai).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-';
+        const start = r.jamMulai
+          ? new Date(r.jamMulai).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+          : '—';
+        const end = r.jamSelesai
+          ? new Date(r.jamSelesai).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+          : '—';
         return <span>{start} - {end}</span>;
       },
     },
@@ -123,23 +99,16 @@ export default function DataTable({
       key: 'menit',
       width: 90,
       align: 'center',
+      sorter: (a, b) => (a.menit || 0) - (b.menit || 0),
       render: (val: number) => <Tag color="orange">{val} menit</Tag>,
-    },
-    {
-      title: 'Problem Item',
-      dataIndex: 'problemItem',
-      key: 'problemItem',
-      width: 200,
-      ...getColumnSearchProps((r) => r.problemItem, 'problemItem', 'Problem Item'),
-      render: (text) => <span className="font-semibold text-gray-800">{text}</span>,
     },
     {
       title: 'PIC',
       dataIndex: 'pic',
       key: 'pic',
       width: 140,
-      ...getColumnSearchProps((r) => getManpowerName(r.pic), 'pic', 'PIC'),
-      render: (nik: string) => getManpowerName(nik),
+      ...getColumnSearchProps<ProductionProblem>((r) => getManpowerName(r.pic), 'PIC'),
+      render: (nik: string) => <span className="font-medium">{getManpowerName(nik)}</span>,
     },
     {
       title: 'SL / DL',
@@ -147,7 +116,12 @@ export default function DataTable({
       key: 'slOrDl',
       width: 100,
       align: 'center',
-      render: (val: string) => <Tag color={val === 'DL' ? 'blue' : 'purple'}>{val}</Tag>,
+      filters: [
+        { text: 'DL', value: 'DL' },
+        { text: 'SL', value: 'SL' },
+      ],
+      onFilter: (value, record) => record.slOrDl === value,
+      render: (val: string) => <Tag color={val === 'DL' ? 'geekblue' : 'default'}>{val}</Tag>,
     },
     {
       title: 'Status',
@@ -169,7 +143,8 @@ export default function DataTable({
       dataIndex: 'keterangan',
       key: 'keterangan',
       ellipsis: true,
-      render: (text) => text || '-',
+      ...getColumnSearchProps<ProductionProblem>('keterangan', 'Keterangan'),
+      render: (text) => text || '—',
     },
     {
       title: 'Aksi',
@@ -183,7 +158,7 @@ export default function DataTable({
             <Button
               type="text"
               size="small"
-              icon={<EditOutlined style={{ color: '#faad14' }} />}
+              icon={<EditOutlined style={{ color: '#d97706' }} />}
               onClick={(e) => {
                 e.stopPropagation();
                 onEdit(record);
@@ -222,10 +197,12 @@ export default function DataTable({
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       <Table<ProductionProblem>
         size="small"
+        className="small-table"
         rowKey="id"
         columns={columns}
         dataSource={data}
         loading={loading}
+        rowClassName={(record) => (selectedKey === record.id ? 'ant-table-row-selected' : '')}
         rowSelection={{
           type: 'radio',
           selectedRowKeys: selectedKey ? [selectedKey] : [],
@@ -248,8 +225,7 @@ export default function DataTable({
           showSizeChanger: true,
           showTotal: (total, range) => `${range[0]}-${range[1]} dari ${total} data`,
         }}
-        scroll={{ x: 1200, y: 'calc(100vh - 320px)' }}
-        className="border border-gray-200 rounded-lg overflow-hidden shadow-sm"
+        scroll={{ x: 1200, y: 'calc(100vh - 330px)' }}
       />
     </div>
   );

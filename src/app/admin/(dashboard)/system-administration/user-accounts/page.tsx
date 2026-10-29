@@ -21,13 +21,13 @@ import {
   ReloadOutlined,
   EditOutlined,
   DeleteOutlined,
-  SearchOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 import { useVuteqSso } from '@vuteq/sso-client-react/react';
 import { bffRequest } from '@/src/lib/client-api';
 import ToolbarWrapper from '@/src/app/components/ToolbarWrapper';
 import ButtonToolbar from '@/src/app/components/ButtonToolbar';
+import { getColumnSearchProps } from '@/src/app/components/table/columnSearch';
 
 interface UserAccount {
   id: string;
@@ -116,57 +116,6 @@ export default function UserAccountsPage() {
     }
   };
 
-  const [searchText, setSearchText] = useState<{ [key: string]: string }>({});
-
-  const getColumnSearchProps = (
-    key: keyof UserAccount,
-    title: string,
-  ): ColumnType<UserAccount> => ({
-    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
-      <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
-        <Input
-          placeholder={`Cari ${title}`}
-          value={selectedKeys[0]}
-          onChange={(e) => {
-            setSelectedKeys(e.target.value ? [e.target.value] : []);
-            setSearchText((prev) => ({ ...prev, [key]: e.target.value }));
-          }}
-          onPressEnter={() => confirm()}
-          style={{ marginBottom: 8, display: 'block' }}
-        />
-        <Space>
-          <Button
-            type="primary"
-            onClick={() => confirm()}
-            icon={<SearchOutlined />}
-            size="small"
-            style={{ width: 90 }}
-          >
-            Cari
-          </Button>
-          <Button
-            onClick={() => {
-              clearFilters?.();
-              setSearchText((prev) => ({ ...prev, [key]: '' }));
-              confirm();
-            }}
-            size="small"
-            style={{ width: 90 }}
-          >
-            Reset
-          </Button>
-        </Space>
-      </div>
-    ),
-    filterIcon: (filtered: boolean) => (
-      <SearchOutlined style={{ color: filtered ? '#1677ff' : undefined }} />
-    ),
-    onFilter: (value, record) =>
-      Boolean(
-        record[key] ? record[key]!.toString().toLowerCase().includes((value as string).toLowerCase()) : false,
-      ),
-  });
-
   const columns: TableProps<UserAccount>['columns'] = [
     {
       title: 'Nama User',
@@ -174,7 +123,7 @@ export default function UserAccountsPage() {
       key: 'name',
       width: 180,
       sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
-      ...getColumnSearchProps('name', 'Nama'),
+      ...getColumnSearchProps<UserAccount>('name', 'Nama'),
       render: (text) => (
         <span className="font-semibold text-gray-800 flex items-center gap-2">
           <UserOutlined className="text-blue-500" />
@@ -187,7 +136,7 @@ export default function UserAccountsPage() {
       dataIndex: 'email',
       key: 'email',
       width: 200,
-      ...getColumnSearchProps('email', 'Email'),
+      ...getColumnSearchProps<UserAccount>('email', 'Email'),
       render: (email) => <span className="font-mono text-xs">{email || '-'}</span>,
     },
     {
@@ -195,6 +144,7 @@ export default function UserAccountsPage() {
       dataIndex: 'roleName',
       key: 'roleName',
       width: 140,
+      ...getColumnSearchProps<UserAccount>('roleName', 'Role'),
       filters: [
         { text: 'admin', value: 'admin' },
         { text: 'none', value: 'none' },
@@ -224,6 +174,8 @@ export default function UserAccountsPage() {
       dataIndex: 'lastLoginAt',
       key: 'lastLoginAt',
       width: 170,
+      sorter: (a, b) => new Date(a.lastLoginAt || 0).getTime() - new Date(b.lastLoginAt || 0).getTime(),
+      ...getColumnSearchProps<UserAccount>('lastLoginAt', 'Last Login'),
       render: (text: string) => (text ? new Date(text).toLocaleString('id-ID') : '-'),
     },
     {
@@ -333,6 +285,7 @@ export default function UserAccountsPage() {
           columns={columns}
           dataSource={data}
           loading={loading}
+          rowClassName={(record) => (record.id === selectedItem?.id ? 'ant-table-row-selected' : '')}
           rowSelection={{
             type: 'radio',
             selectedRowKeys: selectedItem ? [selectedItem.id] : [],
@@ -356,7 +309,7 @@ export default function UserAccountsPage() {
             showTotal: (total, range) => `${range[0]}-${range[1]} dari ${total} data`,
           }}
           scroll={{ x: 1000, y: 'calc(100vh - 320px)' }}
-          className="border border-gray-200 rounded-lg overflow-hidden shadow-sm"
+          className="small-table border border-[#D9DDDF] shadow-sm"
         />
       </div>
 

@@ -1,15 +1,16 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Table, Input, Button, Space, Popconfirm, Tag, Tooltip } from 'antd';
-import type { TableProps, ColumnType } from 'antd/es/table';
+import React from 'react';
+import { Table, Button, Space, Popconfirm, Tag, Tooltip } from 'antd';
+import type { TableProps } from 'antd/es/table';
 import {
-  SearchOutlined,
   CheckOutlined,
   CloseOutlined,
   EditOutlined,
   DeleteOutlined,
 } from '@ant-design/icons';
+import { getColumnSearchProps } from '@/src/app/components/table/columnSearch';
+import GoldenArrowAction from '@/src/app/components/GoldenArrowAction';
 
 export interface PackingEntry {
   id: number;
@@ -62,81 +63,44 @@ export default function DataTable({
   canUpdate,
   canDelete,
 }: DataTableProps) {
-  const [searchText, setSearchText] = useState<{ [key: string]: string }>({});
-
-  const getColumnSearchProps = (
-    accessor: (record: PackingEntry) => string,
-    key: string,
-    title: string,
-  ): ColumnType<PackingEntry> => ({
-    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
-      <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
-        <Input
-          placeholder={`Cari ${title}`}
-          value={selectedKeys[0]}
-          onChange={(e) => {
-            setSelectedKeys(e.target.value ? [e.target.value] : []);
-            setSearchText((prev) => ({ ...prev, [key]: e.target.value }));
-          }}
-          onPressEnter={() => confirm()}
-          style={{ marginBottom: 8, display: 'block' }}
-        />
-        <Space>
-          <Button
-            type="primary"
-            onClick={() => confirm()}
-            icon={<SearchOutlined />}
-            size="small"
-            style={{ width: 90 }}
-          >
-            Cari
-          </Button>
-          <Button
-            onClick={() => {
-              clearFilters?.();
-              setSearchText((prev) => ({ ...prev, [key]: '' }));
-              confirm();
-            }}
-            size="small"
-            style={{ width: 90 }}
-          >
-            Reset
-          </Button>
-        </Space>
-      </div>
-    ),
-    filterIcon: (filtered: boolean) => (
-      <SearchOutlined style={{ color: filtered ? '#1677ff' : undefined }} />
-    ),
-    onFilter: (value, record) => {
-      const val = accessor(record) || '';
-      return val.toLowerCase().includes((value as string).toLowerCase());
-    },
-  });
-
   const columns: TableProps<PackingEntry>['columns'] = [
+    {
+      title: 'PR ID',
+      dataIndex: 'packingReqNo',
+      key: 'packingReqNo',
+      width: 145,
+      sorter: (a, b) => (a.packingReqNo || '').localeCompare(b.packingReqNo || ''),
+      ...getColumnSearchProps<PackingEntry>('packingReqNo', 'PR ID'),
+      render: (text, record) => (
+        <Space size={6}>
+          <GoldenArrowAction
+            tooltip="Pilih / Detail Packing Entry"
+            onClick={() => onSelectRow(record)}
+          />
+          <span className="font-mono font-bold text-[#4C6A85]">{text}</span>
+        </Space>
+      ),
+    },
     {
       title: 'Tanggal',
       dataIndex: 'tanggalPacking',
       key: 'tanggalPacking',
       width: 110,
-      render: (text: string) => (text ? new Date(text).toLocaleDateString('id-ID') : '-'),
-    },
-    {
-      title: 'PR ID',
-      dataIndex: 'packingReqNo',
-      key: 'packingReqNo',
-      width: 140,
-      ...getColumnSearchProps((r) => r.packingReqNo, 'packingReqNo', 'PR ID'),
-      render: (text) => <span className="font-mono font-bold text-blue-700">{text}</span>,
+      sorter: (a, b) => new Date(a.tanggalPacking).getTime() - new Date(b.tanggalPacking).getTime(),
+      ...getColumnSearchProps<PackingEntry>(
+        (r) => (r.tanggalPacking ? new Date(r.tanggalPacking).toLocaleDateString('id-ID') : ''),
+        'Tanggal'
+      ),
+      render: (text: string) => (text ? new Date(text).toLocaleDateString('id-ID') : '—'),
     },
     {
       title: 'Line / Jam',
       key: 'lineJam',
       width: 130,
+      ...getColumnSearchProps<PackingEntry>((r) => r.lineNo || '', 'Line'),
       render: (_, r) => (
         <div>
-          <span className="font-semibold text-gray-800">{r.lineNo || '-'}</span>
+          <span className="font-semibold text-[#293241]">{r.lineNo || '—'}</span>
           <div className="text-xs text-gray-500">
             {r.jamMulai} - {r.jamSelesai} ({r.menitPacking}m)
           </div>
@@ -147,15 +111,14 @@ export default function DataTable({
       title: 'Part / Model',
       key: 'partInfo',
       width: 180,
-      ...getColumnSearchProps(
+      ...getColumnSearchProps<PackingEntry>(
         (r) => `${r.customerPartNo || ''} ${r.explannerNo || ''} ${r.type || ''}`,
-        'partInfo',
-        'Part / Model',
+        'Part / Model'
       ),
       render: (_, r) => (
         <div>
-          <Tag color={r.type === '2R' ? 'cyan' : 'magenta'}>{r.type}</Tag>
-          <span className="font-medium text-gray-800">{r.customerPartNo || r.explannerNo || '-'}</span>
+          <Tag color={r.type === '2R' ? 'geekblue' : 'default'}>{r.type}</Tag>
+          <span className="font-medium text-[#293241]">{r.customerPartNo || r.explannerNo || '—'}</span>
         </div>
       ),
     },
@@ -165,6 +128,7 @@ export default function DataTable({
       key: 'qtyPlan',
       width: 80,
       align: 'right',
+      sorter: (a, b) => (a.qtyPlan || 0) - (b.qtyPlan || 0),
       render: (val: number) => <span className="text-gray-600">{val?.toLocaleString('id-ID')}</span>,
     },
     {
@@ -173,7 +137,8 @@ export default function DataTable({
       key: 'qtyActualPacking',
       width: 85,
       align: 'right',
-      render: (val: number) => <span className="font-bold text-blue-600">{val?.toLocaleString('id-ID')}</span>,
+      sorter: (a, b) => (a.qtyActualPacking || 0) - (b.qtyActualPacking || 0),
+      render: (val: number) => <span className="font-bold text-[#4F46E5]">{val?.toLocaleString('id-ID')}</span>,
     },
     {
       title: 'Balance',
@@ -181,6 +146,7 @@ export default function DataTable({
       key: 'balance',
       width: 85,
       align: 'right',
+      sorter: (a, b) => (a.balancePlanVsActual || 0) - (b.balancePlanVsActual || 0),
       render: (val: number) => {
         const color = val === 0 ? 'text-green-600' : val > 0 ? 'text-amber-500' : 'text-red-500';
         return <span className={`font-bold ${color}`}>{val?.toLocaleString('id-ID')}</span>;
@@ -190,14 +156,13 @@ export default function DataTable({
       title: 'PIC',
       key: 'pic',
       width: 130,
-      ...getColumnSearchProps(
+      ...getColumnSearchProps<PackingEntry>(
         (r) => [r.pic1?.name, r.pic2?.name, r.pic3?.name].filter(Boolean).join(', '),
-        'pic',
-        'PIC',
+        'PIC'
       ),
       render: (_, r) => {
         const pics = [r.pic1?.name, r.pic2?.name, r.pic3?.name].filter(Boolean);
-        return <span>{pics.join(', ') || '-'}</span>;
+        return <span>{pics.join(', ') || '—'}</span>;
       },
     },
     {
@@ -236,7 +201,7 @@ export default function DataTable({
                     type="text"
                     size="small"
                     loading={isActionLoading}
-                    icon={<CheckOutlined style={{ color: '#52c41a' }} />}
+                    icon={<CheckOutlined style={{ color: '#16a34a' }} />}
                     onClick={(e) => {
                       e.stopPropagation();
                       onApprove(record.id);
@@ -248,7 +213,7 @@ export default function DataTable({
                     type="text"
                     size="small"
                     loading={isActionLoading}
-                    icon={<CloseOutlined style={{ color: '#ff4d4f' }} />}
+                    icon={<CloseOutlined style={{ color: '#dc2626' }} />}
                     onClick={(e) => {
                       e.stopPropagation();
                       onReject(record.id);
@@ -261,7 +226,7 @@ export default function DataTable({
               <Button
                 type="text"
                 size="small"
-                icon={<EditOutlined style={{ color: '#faad14' }} />}
+                icon={<EditOutlined style={{ color: '#d97706' }} />}
                 onClick={(e) => {
                   e.stopPropagation();
                   onEdit(record);
@@ -301,10 +266,12 @@ export default function DataTable({
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       <Table<PackingEntry>
         size="small"
+        className="small-table"
         rowKey="id"
         columns={columns}
         dataSource={data}
         loading={loading}
+        rowClassName={(record) => (selectedKey === record.id ? 'ant-table-row-selected' : '')}
         rowSelection={{
           type: 'radio',
           selectedRowKeys: selectedKey ? [selectedKey] : [],
@@ -327,8 +294,7 @@ export default function DataTable({
           showSizeChanger: true,
           showTotal: (total, range) => `${range[0]}-${range[1]} dari ${total} data`,
         }}
-        scroll={{ x: 1400, y: 'calc(100vh - 320px)' }}
-        className="border border-gray-200 rounded-lg overflow-hidden shadow-sm"
+        scroll={{ x: 1400, y: 'calc(100vh - 330px)' }}
       />
     </div>
   );

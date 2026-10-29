@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { Breadcrumb, message, Typography, Table, Tag, Input, Space, Button } from 'antd';
-import type { TableProps, ColumnType } from 'antd/es/table';
-import { ReloadOutlined, SearchOutlined, KeyOutlined } from '@ant-design/icons';
+import { Breadcrumb, message, Typography, Table, Tag } from 'antd';
+import type { TableProps } from 'antd/es/table';
+import { ReloadOutlined, KeyOutlined } from '@ant-design/icons';
 import { bffRequest } from '@/src/lib/client-api';
 import ToolbarWrapper from '@/src/app/components/ToolbarWrapper';
 import ButtonToolbar from '@/src/app/components/ButtonToolbar';
+import { getColumnSearchProps } from '@/src/app/components/table/columnSearch';
 
 interface PermissionItem {
   id: number;
@@ -18,7 +19,7 @@ interface PermissionItem {
 export default function PermissionsSetupPage() {
   const [data, setData] = useState<PermissionItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchText, setSearchText] = useState<{ [key: string]: string }>({});
+  const [selectedRowKey, setSelectedRowKey] = useState<React.Key | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -37,55 +38,6 @@ export default function PermissionsSetupPage() {
     fetchData();
   }, [fetchData]);
 
-  const getColumnSearchProps = (
-    key: keyof PermissionItem,
-    title: string,
-  ): ColumnType<PermissionItem> => ({
-    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
-      <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
-        <Input
-          placeholder={`Cari ${title}`}
-          value={selectedKeys[0]}
-          onChange={(e) => {
-            setSelectedKeys(e.target.value ? [e.target.value] : []);
-            setSearchText((prev) => ({ ...prev, [key]: e.target.value }));
-          }}
-          onPressEnter={() => confirm()}
-          style={{ marginBottom: 8, display: 'block' }}
-        />
-        <Space>
-          <Button
-            type="primary"
-            onClick={() => confirm()}
-            icon={<SearchOutlined />}
-            size="small"
-            style={{ width: 90 }}
-          >
-            Cari
-          </Button>
-          <Button
-            onClick={() => {
-              clearFilters?.();
-              setSearchText((prev) => ({ ...prev, [key]: '' }));
-              confirm();
-            }}
-            size="small"
-            style={{ width: 90 }}
-          >
-            Reset
-          </Button>
-        </Space>
-      </div>
-    ),
-    filterIcon: (filtered: boolean) => (
-      <SearchOutlined style={{ color: filtered ? '#1677ff' : undefined }} />
-    ),
-    onFilter: (value, record) =>
-      Boolean(
-        record[key] ? record[key]!.toString().toLowerCase().includes((value as string).toLowerCase()) : false,
-      ),
-  });
-
   const columns: TableProps<PermissionItem>['columns'] = [
     {
       title: 'Action Identifier',
@@ -93,7 +45,7 @@ export default function PermissionsSetupPage() {
       key: 'action',
       width: 280,
       sorter: (a, b) => a.action.localeCompare(b.action),
-      ...getColumnSearchProps('action', 'Action Identifier'),
+      ...getColumnSearchProps<PermissionItem>('action', 'Action Identifier'),
       render: (text: string) => (
         <span className="font-mono font-bold text-blue-700 flex items-center gap-1.5">
           <KeyOutlined className="text-gray-400" />
@@ -105,6 +57,14 @@ export default function PermissionsSetupPage() {
       title: 'Modul / Domain',
       key: 'domain',
       width: 150,
+      ...getColumnSearchProps<PermissionItem>(
+        'domain',
+        'Domain',
+        (r: PermissionItem) => {
+          const parts = r.action.split('.');
+          return parts.length > 1 ? parts[1].split('_')[0] : 'GENERAL';
+        },
+      ),
       render: (_, r) => {
         const parts = r.action.split('.');
         const domain = parts.length > 1 ? parts[1].split('_')[0] : 'GENERAL';
@@ -115,7 +75,7 @@ export default function PermissionsSetupPage() {
       title: 'Deskripsi Izin Akses',
       dataIndex: 'description',
       key: 'description',
-      ...getColumnSearchProps('description', 'Deskripsi'),
+      ...getColumnSearchProps<PermissionItem>('description', 'Deskripsi'),
       render: (text) => text || '-',
     },
   ];
@@ -157,6 +117,13 @@ export default function PermissionsSetupPage() {
           columns={columns}
           dataSource={data}
           loading={loading}
+          rowClassName={(record) => (record.id === selectedRowKey ? 'ant-table-row-selected' : '')}
+          onRow={(record) => ({
+            onClick: () => {
+              setSelectedRowKey((prev) => (prev === record.id ? null : record.id));
+            },
+            style: { cursor: 'pointer' },
+          })}
           pagination={{
             defaultPageSize: 15,
             pageSizeOptions: ['15', '30', '50', '100'],
@@ -164,7 +131,7 @@ export default function PermissionsSetupPage() {
             showTotal: (total, range) => `${range[0]}-${range[1]} dari ${total} permission`,
           }}
           scroll={{ x: 800, y: 'calc(100vh - 320px)' }}
-          className="border border-gray-200 rounded-lg overflow-hidden shadow-sm"
+          className="small-table border border-[#D9DDDF] shadow-sm"
         />
       </div>
     </div>

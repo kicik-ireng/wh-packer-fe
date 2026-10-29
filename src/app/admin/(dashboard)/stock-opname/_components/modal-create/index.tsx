@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Modal, Form, Input, InputNumber, Select, Switch, Table, Row, Col, message } from 'antd';
+import { Modal, Form, Input, InputNumber, Select, Switch, Table, Row, Col, message, Tag } from 'antd';
 import { bffRequest } from '@/src/lib/client-api';
+import { useVuteqSso } from '@vuteq/sso-client-react/react';
 
 interface ModalCreateProps {
   open: boolean;
@@ -26,6 +27,9 @@ export default function ModalCreate({
   const [selectedPartIds, setSelectedPartIds] = useState<number[]>([]);
   const [workspaceData, setWorkspaceData] = useState<any[]>([]);
 
+  const { session } = useVuteqSso();
+  const userName = (session as any)?.profile?.FullName || (session as any)?.profile?.name || (session as any)?.email || 'Stockist';
+
   useEffect(() => {
     if (!open) {
       form.resetFields();
@@ -33,8 +37,12 @@ export default function ModalCreate({
       setIsAllPart(false);
       setSelectedPartIds([]);
       setWorkspaceData([]);
+    } else {
+      form.setFieldsValue({
+        picStockist: userName,
+      });
     }
-  }, [open, form]);
+  }, [open, form, userName]);
 
   useEffect(() => {
     if (!selectedType) {
@@ -57,12 +65,19 @@ export default function ModalCreate({
     const newWorkspaceData = filteredStocks.map((s) => {
       const part = selectedType === '2R' ? s.part2r : s.part4r;
       const existing = workspaceData.find((w) => w.partId === part?.id);
+      const qtySystem = s.totalStock || 0;
+      const qtyActual = existing ? existing.qtyActual : qtySystem;
+      const rack = existing ? existing.rack : (s.rack || '-');
+      const qtyBeginning = existing?.qtyBeginning !== undefined ? existing.qtyBeginning : qtySystem;
+
       return {
         partId: part?.id,
         partNum: part?.oeNo || part?.codeNo || '-',
         partName: part?.model || part?.emiPartName || '-',
-        qtySystem: s.totalStock || 0,
-        qtyActual: existing ? existing.qtyActual : s.totalStock || 0,
+        rack,
+        qtyBeginning,
+        qtySystem,
+        qtyActual,
         keterangan: existing ? existing.keterangan : '',
       };
     });
@@ -73,6 +88,12 @@ export default function ModalCreate({
   const handleQtyChange = (partId: number, val: number | null) => {
     setWorkspaceData((prev) =>
       prev.map((item) => (item.partId === partId ? { ...item, qtyActual: val ?? 0 } : item)),
+    );
+  };
+
+  const handleRackChange = (partId: number, val: string) => {
+    setWorkspaceData((prev) =>
+      prev.map((item) => (item.partId === partId ? { ...item, rack: val } : item)),
     );
   };
 
@@ -91,15 +112,22 @@ export default function ModalCreate({
       }
 
       setSubmitting(true);
-      const payload = workspaceData.map((w) => ({
-        part2rId: selectedType === '2R' ? w.partId : null,
-        part4rId: selectedType === '4R' ? w.partId : null,
-        qtySystem: w.qtySystem,
-        qtyActual: w.qtyActual,
-        keterangan: w.keterangan,
-        pic: values.pic,
-        status: 'PENDING',
-      }));
+      const payload = workspaceData.map((w) => {
+        const diff = w.qtyActual - w.qtySystem;
+        return {
+          part2rId: selectedType === '2R' ? w.partId : null,
+          part4rId: selectedType === '4R' ? w.partId : null,
+          qtyBeginning: w.qtyBeginning,
+          qtySystem: w.qtySystem,
+          qtyActual: w.qtyActual,
+          qtyDiff: diff,
+          rack: w.rack || null,
+          picStockist: values.picStockist,
+          pic: values.picStockist,
+          keterangan: w.keterangan || (diff === 0 ? 'Fisik Cocok' : diff > 0 ? 'Surplus Fisik' : 'Defisit Fisik'),
+          status: 'PENDING',
+        };
+      });
 
       await bffRequest('stock-opname', {
         method: 'POST',
@@ -107,7 +135,7 @@ export default function ModalCreate({
         body: JSON.stringify(payload),
       });
 
-      message.success('Stock Opname berhasil dibuat');
+      message.success(`Berhasil mencatat ${payload.length} item stock opname! Menunggu approval.`);
       onSuccess();
     } catch (err: any) {
       message.error(err.message || 'Gagal menyimpan Stock Opname');
@@ -129,27 +157,44 @@ export default function ModalCreate({
       title: 'Part / Model',
       dataIndex: 'partName',
       key: 'partName',
+      width: 170,
       render: (text: string, r: any) => (
         <div>
-          <span className="font-semibold">{text}</span>
-          <div className="text-xs text-gray-500">{r.partNum}</div>
+          <span className="font-bold text-gray-900">{text}</span>
+          <div className="text-xs text-blue-600 font-mono">{r.partNum}</div>
         </div>
       ),
     },
     {
-      title: 'Qty System',
-      dataIndex: 'qtySystem',
-      key: 'qtySystem',
-      width: 100,
-      align: 'center' as const,
+      title: 'Rak',
+      dataIndex: 'rack',
+      key: 'rack',
+      width: 90,
+      render: (_: any, r: any) => (
+        <Input
+          size="small"
+          value={r.rack}
+          placeholder="Lokasi Rak"
+          onChange={(e) => handleRackChange(r.partId, e.target.value)}
+        />
+      ),
     },
     {
-      title: 'Qty Actual',
+      title: 'Saldo Sistem',
+      dataIndex: 'qtySystem',
+      key: 'qtySystem',
+      width: 95,
+      align: 'right' as const,
+      render: (val: number) => <span className="font-bold text-gray-700 font-mono">{val?.toLocaleString('id-ID')}</span>,
+    },
+    {
+      title: 'Fisik Aktual',
       key: 'qtyActual',
-      width: 130,
+      width: 110,
       render: (_: any, r: any) => (
         <InputNumber
           min={0}
+          size="small"
           value={r.qtyActual}
           onChange={(val) => handleQtyChange(r.partId, val)}
           style={{ width: '100%' }}
@@ -157,12 +202,25 @@ export default function ModalCreate({
       ),
     },
     {
-      title: 'Keterangan',
+      title: 'Selisih',
+      key: 'diff',
+      width: 110,
+      align: 'center' as const,
+      render: (_: any, r: any) => {
+        const diff = (r.qtyActual ?? 0) - (r.qtySystem ?? 0);
+        if (diff === 0) return <Tag color="success">MATCH (0)</Tag>;
+        if (diff > 0) return <Tag color="blue">+{diff} (LEBIH)</Tag>;
+        return <Tag color="error">{diff} (KURANG)</Tag>;
+      },
+    },
+    {
+      title: 'Catatan / Alasan Selisih',
       key: 'keterangan',
-      width: 200,
+      width: 180,
       render: (_: any, r: any) => (
         <Input
-          placeholder="Catatan..."
+          size="small"
+          placeholder="Analisa selisih / kondisi part..."
           value={r.keterangan}
           onChange={(e) => handleKetChange(r.partId, e.target.value)}
         />
@@ -172,22 +230,22 @@ export default function ModalCreate({
 
   return (
     <Modal
-      title="Input Stock Opname Baru"
+      title="Audit Fisik Stock Opname (Petugas Stockist)"
       open={open}
       onOk={handleOk}
       onCancel={onCancel}
       confirmLoading={submitting}
-      okText="Simpan Stock Opname"
+      okText="Simpan Hasil Opname"
       cancelText="Batal"
-      width={800}
+      width={900}
       centered
       zIndex={1050}
       destroyOnClose
     >
-      <Form form={form} layout="vertical" className="mt-4">
+      <Form form={form} layout="vertical" className="mt-3">
         <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item label="Pilih Tipe" required>
+          <Col span={8}>
+            <Form.Item label="Pilih Tipe Gudang" required>
               <Select
                 placeholder="Pilih 2R atau 4R"
                 value={selectedType}
@@ -196,36 +254,36 @@ export default function ModalCreate({
                   setSelectedPartIds([]);
                 }}
                 options={[
-                  { label: '2R (Motor)', value: '2R' },
-                  { label: '4R (Mobil)', value: '4R' },
+                  { label: '2R (Roda Dua / Motor)', value: '2R' },
+                  { label: '4R (Roda Empat / Mobil)', value: '4R' },
                 ]}
               />
             </Form.Item>
           </Col>
-          <Col span={12}>
+          <Col span={16}>
             <Form.Item
-              name="pic"
-              label="PIC / Penanggung Jawab"
-              rules={[{ required: true, message: 'PIC wajib diisi' }]}
+              name="picStockist"
+              label="Petugas Stockist (Penanggung Jawab Hitung Fisik)"
+              rules={[{ required: true, message: 'Nama petugas stockist wajib diisi' }]}
             >
-              <Input placeholder="Nama PIC Opname" />
+              <Input placeholder="Nama Petugas Stockist" />
             </Form.Item>
           </Col>
         </Row>
 
         {selectedType && (
-          <Row gutter={16} align="middle" className="mb-4">
-            <Col span={8}>
+          <Row gutter={16} align="middle" className="mb-3">
+            <Col span={7}>
               <div className="flex items-center gap-2">
                 <Switch checked={isAllPart} onChange={setIsAllPart} />
-                <span className="text-sm">Semua Part {selectedType}</span>
+                <span className="text-sm font-semibold">Semua Part {selectedType}</span>
               </div>
             </Col>
             {!isAllPart && (
-              <Col span={16}>
+              <Col span={17}>
                 <Select
                   mode="multiple"
-                  placeholder="Pilih part tertentu"
+                  placeholder="Pilih part tertentu untuk di-audit..."
                   style={{ width: '100%' }}
                   value={selectedPartIds}
                   onChange={setSelectedPartIds}
@@ -238,13 +296,14 @@ export default function ModalCreate({
         )}
 
         {workspaceData.length > 0 && (
-          <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <div className="border border-[#D9DDDF] shadow-sm">
             <Table
               size="small"
+              className="small-table"
               columns={columns}
               dataSource={workspaceData}
               rowKey="partId"
-              pagination={{ pageSize: 5 }}
+              pagination={{ pageSize: 8 }}
             />
           </div>
         )}
