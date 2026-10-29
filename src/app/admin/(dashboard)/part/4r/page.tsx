@@ -1,220 +1,166 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { PlusCircle, Pencil, Trash2 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { Button, Modal, Form, Input, Space, Popconfirm, message } from "antd";
-import { PackageSearch } from "lucide-react";
-import ModernTable from "@/src/app/components/ModernTable";
-
-interface Part4r {
-  id: number;
-  codeNo: string;
-  customer: string;
-  segment: string;
-  assyNo16: string;
-  assyNo10: string;
-  oeNo: string;
-  model: string;
-  kpp: string;
-  kppNp: string;
-}
+import React, { useEffect, useState, useCallback } from 'react';
+import { Breadcrumb, message, Modal, Typography } from 'antd';
+import {
+  ReloadOutlined,
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+} from '@ant-design/icons';
+import { useVuteqSso } from '@vuteq/sso-client-react/react';
+import { bffRequest } from '@/src/lib/client-api';
+import ToolbarWrapper from '@/src/app/components/ToolbarWrapper';
+import ButtonToolbar from '@/src/app/components/ButtonToolbar';
+import DataTable, { type Part4r } from './_components/data-table';
+import ModalCreate from './_components/modal-create';
+import ModalUpdate from './_components/modal-update';
 
 export default function Part4rPage() {
   const [data, setData] = useState<Part4r[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  const [form] = Form.useForm();
-  const [formData, setFormData] = useState<Part4r>({
-    id: 0,
-    codeNo: "",
-    customer: "",
-    segment: "",
-    assyNo16: "",
-    assyNo10: "",
-    oeNo: "",
-    model: "",
-    kpp: "",
-    kppNp: "",
-  });
+  const [selectedItem, setSelectedItem] = useState<Part4r | undefined>(undefined);
+  const [openCreate, setOpenCreate] = useState(false);
+  const [openUpdate, setOpenUpdate] = useState(false);
 
-  const router = useRouter();
+  const { session } = useVuteqSso();
+  const userRole = (session?.roles?.[0] as string) || (session?.attributes?.RoleName as string) || 'none';
+  const isAdmin = userRole === 'admin' || (session?.globalRoles ?? []).includes('SUPER_ADMINISTRATOR') || (session?.globalRoles ?? []).includes('GLOBAL_ADMINISTRATOR');
+  const userPermissions = (session?.permissions as string[]) ?? [];
 
-  useEffect(() => {
-    fetchParts();
-  }, []);
+  const hasPerm = (perm: string) => {
+    if (isAdmin) return true;
+    return userPermissions.includes(perm) || userPermissions.includes('SUPER') || userPermissions.includes('*');
+  };
 
-  const fetchParts = async () => {
+  const canCreate = hasPerm('PACKER.PART4R_CREATE');
+  const canUpdate = hasPerm('PACKER.PART4R_UPDATE');
+  const canDelete = hasPerm('PACKER.PART4R_DELETE');
+
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://10.10.10.5:5055/part-database-4r", {
-        credentials: "include",
-      });
-      const json = await res.json();
-      setData(json);
-    } catch (err) {
-      message.error("Gagal mengambil data part 4R");
-    }
-    setLoading(false);
-  };
-
-  const handleSave = async (values: any) => {
-    const method = formData.id ? "PATCH" : "POST";
-    const url = formData.id
-      ? `http://10.10.10.5:5055/part-database-4r/${formData.id}`
-      : `http://10.10.10.5:5055/part-database-4r`;
-
-    try {
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(values),
-      });
-
-      if (res.ok) {
-        message.success("Part 4R saved successfully");
-        setShowForm(false);
-        fetchParts();
-      } else {
-        message.error("Failed to save part");
+      const res = await bffRequest<Part4r[] | { data: Part4r[] }>('part-database-4r');
+      const list = Array.isArray(res) ? res : res.data || [];
+      setData(list);
+      if (selectedItem) {
+        const stillExists = list.find((p) => p.id === selectedItem.id);
+        setSelectedItem(stillExists);
       }
-    } catch (error) {
-      message.error("An error occurred");
+    } catch (err: any) {
+      message.error(err.message || 'Gagal mengambil data part 4R');
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [selectedItem]);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const handleDelete = async (id: number) => {
     try {
-      await fetch(`http://10.10.10.5:5055/part-database-4r/${id}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      message.success("Part 4R deleted");
-      fetchParts();
-    } catch (err) {
-      message.error("Failed to delete part");
+      await bffRequest(`part-database-4r/${id}`, { method: 'DELETE' });
+      message.success('Part 4R berhasil dihapus');
+      if (selectedItem?.id === id) setSelectedItem(undefined);
+      fetchData();
+    } catch (err: any) {
+      message.error(err.message || 'Gagal menghapus part 4R');
     }
   };
 
-  const openEdit = (item: Part4r) => {
-    setFormData(item);
-    form.setFieldsValue(item);
-    setShowForm(true);
-  };
-
-  const columns: any = [
-    { title: "Code No", dataIndex: "codeNo", key: "codeNo" },
-    { title: "Customer", dataIndex: "customer", key: "customer" },
-    { title: "Segment", dataIndex: "segment", key: "segment" },
-    { title: "Assy No 16", dataIndex: "assyNo16", key: "assyNo16" },
-    { title: "Assy No 10", dataIndex: "assyNo10", key: "assyNo10" },
-    { title: "OE No", dataIndex: "oeNo", key: "oeNo" },
-    { title: "Model", dataIndex: "model", key: "model" },
-    { title: "KPP", dataIndex: "kpp", key: "kpp" },
-    { title: "KPP NP", dataIndex: "kppNp", key: "kppNp" },
-    {
-      title: "Aksi",
-      key: "action",
-      width: 150,
-      disableSearch: true,
-      render: (_: any, record: Part4r) => (
-        <Space>
-          <Button
-            type="text"
-            icon={<Pencil size={14} className="text-blue-500" />}
-            onClick={() => openEdit(record)}
-          />
-          <Popconfirm
-            title="Hapus part ini?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Ya"
-            cancelText="Batal"
-          >
-            <Button type="text" danger icon={<Trash2 size={14} />} />
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ];
-
   return (
-    <div className="w-full">
-      <ModernTable
-        title="Part 4R Management"
-        icon={<PackageSearch size={24} className="text-blue-600" />}
-        extraActions={
-          <Button
-            type="primary"
-            icon={<PlusCircle size={16} />}
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      <div style={{ flexShrink: 0, marginBottom: 8 }}>
+        <Breadcrumb
+          items={[
+            { title: 'Home' },
+            { title: 'Part Database' },
+            { title: 'Part 4R' },
+          ]}
+        />
+        <div className="flex items-center justify-between mt-1">
+          <Typography.Title level={4} style={{ margin: 0 }}>
+            Master Data Part 4R
+          </Typography.Title>
+        </div>
+      </div>
+
+      {/* Toolbar Standard */}
+      <div style={{ flexShrink: 0 }}>
+        <ToolbarWrapper>
+          <ButtonToolbar
+            title="Refresh"
+            icon={<ReloadOutlined />}
+            onClick={fetchData}
+            loading={loading}
+          />
+          <ButtonToolbar
+            title="Tambah"
+            icon={<PlusOutlined />}
+            onClick={() => setOpenCreate(true)}
+            enable={canCreate}
+          />
+          <ButtonToolbar
+            title="Edit"
+            icon={<EditOutlined />}
+            onClick={() => selectedItem && setOpenUpdate(true)}
+            enable={Boolean(selectedItem) && canUpdate}
+          />
+          <ButtonToolbar
+            title="Hapus"
+            icon={<DeleteOutlined />}
             onClick={() => {
-              setFormData({
-                id: 0,
-                codeNo: "",
-                customer: "",
-                segment: "",
-                assyNo16: "",
-                assyNo10: "",
-                oeNo: "",
-                model: "",
-                kpp: "",
-                kppNp: "",
+              if (!selectedItem) return;
+              Modal.confirm({
+                title: 'Hapus Part 4R',
+                content: `Apakah Anda yakin ingin menghapus Part 4R ${selectedItem.codeNo}?`,
+                okText: 'Hapus',
+                okButtonProps: { danger: true },
+                cancelText: 'Batal',
+                onOk: () => handleDelete(selectedItem.id),
               });
-              form.resetFields();
-              setShowForm(true);
             }}
-          >
-            Tambah Part 4R
-          </Button>
-        }
-        columns={columns}
-        dataSource={data}
-        rowKey="id"
+            enable={Boolean(selectedItem) && canDelete}
+            danger
+          />
+        </ToolbarWrapper>
+      </div>
+
+      {/* Data Table */}
+      <DataTable
+        data={data}
         loading={loading}
+        selectedKey={selectedItem?.id}
+        onSelectRow={setSelectedItem}
+        onEdit={(item) => {
+          setSelectedItem(item);
+          setOpenUpdate(true);
+        }}
+        onDelete={handleDelete}
+        canUpdate={canUpdate}
+        canDelete={canDelete}
       />
 
-      <Modal
-        title={formData.id ? "Edit Part 4R" : "Tambah Part 4R"}
-        open={showForm}
-        onCancel={() => setShowForm(false)}
-        footer={null}
-      >
-        <Form form={form} layout="vertical" onFinish={handleSave}>
-          <Form.Item name="codeNo" label="Code No" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="customer" label="Customer" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="segment" label="Segment" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="assyNo16" label="Assy No 16" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="assyNo10" label="Assy No 10" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="oeNo" label="OE No" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="model" label="Model" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="kpp" label="KPP" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="kppNp" label="KPP NP" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <div className="flex justify-end gap-2">
-            <Button onClick={() => setShowForm(false)}>Batal</Button>
-            <Button type="primary" htmlType="submit">
-              Simpan
-            </Button>
-          </div>
-        </Form>
-      </Modal>
+      {/* Modals */}
+      <ModalCreate
+        open={openCreate}
+        onCancel={() => setOpenCreate(false)}
+        onSuccess={() => {
+          setOpenCreate(false);
+          fetchData();
+        }}
+      />
+
+      <ModalUpdate
+        open={openUpdate}
+        data={selectedItem ?? null}
+        onCancel={() => setOpenUpdate(false)}
+        onSuccess={() => {
+          setOpenUpdate(false);
+          fetchData();
+        }}
+      />
     </div>
   );
 }

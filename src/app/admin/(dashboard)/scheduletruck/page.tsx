@@ -1,257 +1,191 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { PlusCircle, Pencil, Trash2 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { FiCalendar } from "react-icons/fi";
-import { Button, Modal, Form, Input, Space, Popconfirm, Select, DatePicker, message } from "antd";
-import ModernTable from "@/src/app/components/ModernTable";
-import dayjs from "dayjs";
-
-interface Truck {
-  id: number;
-  noPol: string;
-}
-interface Driver {
-  id: number;
-  name: string;
-}
-interface Customer {
-  id: number;
-  name: string;
-}
-interface ScheduleTruck {
-  id: number;
-  scheduleAt: string;
-  truck: Truck;
-  driver: Driver;
-  cycle?: number;
-  customers: { customer: Customer }[];
-}
+import React, { useEffect, useState, useCallback } from 'react';
+import { Breadcrumb, message, Modal, Typography } from 'antd';
+import {
+  ReloadOutlined,
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+} from '@ant-design/icons';
+import { useVuteqSso } from '@vuteq/sso-client-react/react';
+import { bffRequest } from '@/src/lib/client-api';
+import ToolbarWrapper from '@/src/app/components/ToolbarWrapper';
+import ButtonToolbar from '@/src/app/components/ButtonToolbar';
+import DataTable, { type ScheduleTruck } from './_components/data-table';
+import ModalCreate from './_components/modal-create';
+import ModalUpdate from './_components/modal-update';
 
 export default function ScheduleTruckPage() {
   const [data, setData] = useState<ScheduleTruck[]>([]);
+  const [trucks, setTrucks] = useState<any[]>([]);
+  const [drivers, setDrivers] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  const [form] = Form.useForm();
+  const [selectedItem, setSelectedItem] = useState<ScheduleTruck | undefined>(undefined);
+  const [openCreate, setOpenCreate] = useState(false);
+  const [openUpdate, setOpenUpdate] = useState(false);
 
-  const [trucks, setTrucks] = useState<Truck[]>([]);
-  const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const { session } = useVuteqSso();
+  const userRole = (session?.roles?.[0] as string) || (session?.attributes?.RoleName as string) || 'none';
+  const isAdmin = userRole === 'admin' || (session?.globalRoles ?? []).includes('SUPER_ADMINISTRATOR') || (session?.globalRoles ?? []).includes('GLOBAL_ADMINISTRATOR');
+  const userPermissions = (session?.permissions as string[]) ?? [];
 
-  const router = useRouter();
-
-  useEffect(() => {
-    verifyLogin();
-    fetchAll();
-  }, []);
-
-  const verifyLogin = async () => {
-    try {
-      const res = await fetch("http://10.10.10.5:5055/auth/verify", {
-        method: "POST",
-        credentials: "include",
-      });
-      if (!res.ok) router.replace("/admin/login");
-    } catch {
-      router.replace("/admin/login");
-    }
+  const hasPerm = (perm: string) => {
+    if (isAdmin) return true;
+    return userPermissions.includes(perm) || userPermissions.includes('SUPER') || userPermissions.includes('*');
   };
 
-  const fetchAll = async () => {
+  const canCreate = hasPerm('PACKER.SCHEDULE_TRUCK_CREATE');
+  const canUpdate = hasPerm('PACKER.SCHEDULE_TRUCK_UPDATE');
+  const canDelete = hasPerm('PACKER.SCHEDULE_TRUCK_DELETE');
+
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [schedulesRes, trucksRes, driversRes, customersRes] =
-        await Promise.all([
-          fetch("http://10.10.10.5:5055/schedule-truck", { credentials: "include" }),
-          fetch("http://10.10.10.5:5055/truck", { credentials: "include" }),
-          fetch("http://10.10.10.5:5055/driver", { credentials: "include" }),
-          fetch("http://10.10.10.5:5055/customer", { credentials: "include" }),
-        ]);
-
-      setData(await schedulesRes.json());
-      setTrucks(await trucksRes.json());
-      setDrivers(await driversRes.json());
-      setCustomers(await customersRes.json());
-    } catch (err) {
-      message.error("Gagal fetch data");
-    }
-    setLoading(false);
-  };
-
-  const handleSave = async (values: any) => {
-    const id = form.getFieldValue("id");
-    const method = id ? "PUT" : "POST";
-    const url = id
-      ? `http://10.10.10.5:5055/schedule-truck/${id}`
-      : `http://10.10.10.5:5055/schedule-truck`;
-
-    const payload = {
-      truckId: values.truckId,
-      driverId: values.driverId,
-      customerIds: values.customerIds,
-      scheduleAt: values.scheduleAt.format("YYYY-MM-DD"),
-      cycle: values.cycle,
-    };
-
-    try {
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
-
-      if (res.ok) {
-        message.success("Schedule saved successfully");
-        setShowForm(false);
-        fetchAll();
-      } else {
-        message.error("Failed to save schedule");
+      const res = await bffRequest<ScheduleTruck[] | { data: ScheduleTruck[] }>('schedule-truck');
+      const list = Array.isArray(res) ? res : res.data || [];
+      setData(list);
+      if (selectedItem) {
+        const stillExists = list.find((s) => s.id === selectedItem.id);
+        setSelectedItem(stillExists);
       }
-    } catch (error) {
-      message.error("An error occurred");
+    } catch (err: any) {
+      message.error(err.message || 'Gagal mengambil data jadwal truck');
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedItem]);
+
+  const fetchOptions = async () => {
+    try {
+      const [trucksRes, driversRes, customersRes] = await Promise.all([
+        bffRequest<any[]>('truck'),
+        bffRequest<any[]>('driver'),
+        bffRequest<any[]>('customer'),
+      ]);
+      setTrucks(Array.isArray(trucksRes) ? trucksRes : (trucksRes as any)?.data || []);
+      setDrivers(Array.isArray(driversRes) ? driversRes : (driversRes as any)?.data || []);
+      setCustomers(Array.isArray(customersRes) ? customersRes : (customersRes as any)?.data || []);
+    } catch (err) {
+      console.error('Failed to fetch options', err);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+    fetchOptions();
+  }, []);
 
   const handleDelete = async (id: number) => {
     try {
-      await fetch(`http://10.10.10.5:5055/schedule-truck/${id}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      message.success("Schedule deleted");
-      fetchAll();
-    } catch (err) {
-      message.error("Failed to delete schedule");
+      await bffRequest(`schedule-truck/${id}`, { method: 'DELETE' });
+      message.success('Jadwal berhasil dihapus');
+      if (selectedItem?.id === id) setSelectedItem(undefined);
+      fetchData();
+    } catch (err: any) {
+      message.error(err.message || 'Gagal menghapus jadwal');
     }
   };
 
-  const openEdit = (item: ScheduleTruck) => {
-    form.setFieldsValue({
-      id: item.id,
-      truckId: item.truck.id,
-      driverId: item.driver.id,
-      customerIds: item.customers.map((c) => c.customer.id),
-      scheduleAt: dayjs(item.scheduleAt),
-      cycle: item.cycle ?? 1,
-    });
-    setShowForm(true);
-  };
-
-  const columns: any = [
-    { title: "Truck", dataIndex: ["truck", "noPol"], key: "truck" },
-    { title: "Driver", dataIndex: ["driver", "name"], key: "driver" },
-    {
-      title: "Customers",
-      key: "customers",
-      render: (_: any, record: ScheduleTruck) => record.customers.map((c) => c.customer.name).join(", "),
-    },
-    { title: "Cycle", dataIndex: "cycle", key: "cycle", render: (t: any) => t ?? "-" },
-    {
-      title: "Schedule At",
-      dataIndex: "scheduleAt",
-      key: "scheduleAt",
-      render: (t: string) => new Date(t).toLocaleDateString()
-    },
-    {
-      title: "Aksi",
-      key: "action",
-      width: 150,
-      disableSearch: true,
-      render: (_: any, record: ScheduleTruck) => (
-        <Space>
-          <Button
-            type="text"
-            icon={<Pencil size={14} className="text-blue-500" />}
-            onClick={() => openEdit(record)}
-          />
-          <Popconfirm
-            title="Hapus schedule ini?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Ya"
-            cancelText="Batal"
-          >
-            <Button type="text" danger icon={<Trash2 size={14} />} />
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ];
-
   return (
-    <div className="w-full">
-      <ModernTable
-        title="Schedule Truck Management"
-        icon={<FiCalendar size={24} className="text-blue-600" />}
-        extraActions={
-          <Button
-            type="primary"
-            icon={<PlusCircle size={16} />}
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      <div style={{ flexShrink: 0, marginBottom: 8 }}>
+        <Breadcrumb
+          items={[
+            { title: 'Home' },
+            { title: 'Delivery' },
+            { title: 'Schedule Truck' },
+          ]}
+        />
+        <div className="flex items-center justify-between mt-1">
+          <Typography.Title level={4} style={{ margin: 0 }}>
+            Jadwal Keberangkatan Truck
+          </Typography.Title>
+        </div>
+      </div>
+
+      {/* Toolbar Standard */}
+      <div style={{ flexShrink: 0 }}>
+        <ToolbarWrapper>
+          <ButtonToolbar
+            title="Refresh"
+            icon={<ReloadOutlined />}
+            onClick={fetchData}
+            loading={loading}
+          />
+          <ButtonToolbar
+            title="Tambah Jadwal"
+            icon={<PlusOutlined />}
+            onClick={() => setOpenCreate(true)}
+            enable={canCreate}
+          />
+          <ButtonToolbar
+            title="Edit Jadwal"
+            icon={<EditOutlined />}
+            onClick={() => selectedItem && setOpenUpdate(true)}
+            enable={Boolean(selectedItem) && canUpdate}
+          />
+          <ButtonToolbar
+            title="Hapus"
+            icon={<DeleteOutlined />}
             onClick={() => {
-              form.resetFields();
-              form.setFieldValue("cycle", 1);
-              setShowForm(true);
+              if (!selectedItem) return;
+              Modal.confirm({
+                title: 'Hapus Jadwal Truck',
+                content: `Apakah Anda yakin ingin menghapus jadwal untuk truck ${selectedItem.truck?.noPol}?`,
+                okText: 'Hapus',
+                okButtonProps: { danger: true },
+                cancelText: 'Batal',
+                onOk: () => handleDelete(selectedItem.id),
+              });
             }}
-          >
-            Tambah Schedule
-          </Button>
-        }
-        columns={columns}
-        dataSource={data}
-        rowKey="id"
+            enable={Boolean(selectedItem) && canDelete}
+            danger
+          />
+        </ToolbarWrapper>
+      </div>
+
+      {/* Data Table */}
+      <DataTable
+        data={data}
         loading={loading}
+        selectedKey={selectedItem?.id}
+        onSelectRow={setSelectedItem}
+        onEdit={(item) => {
+          setSelectedItem(item);
+          setOpenUpdate(true);
+        }}
+        onDelete={handleDelete}
+        canUpdate={canUpdate}
+        canDelete={canDelete}
       />
 
-      <Modal
-        title={form.getFieldValue("id") ? "Edit Schedule" : "Tambah Schedule"}
-        open={showForm}
-        onCancel={() => setShowForm(false)}
-        footer={null}
-      >
-        <Form form={form} layout="vertical" onFinish={handleSave}>
-          <Form.Item name="id" hidden><Input /></Form.Item>
+      {/* Modals */}
+      <ModalCreate
+        open={openCreate}
+        trucks={trucks}
+        drivers={drivers}
+        customers={customers}
+        onCancel={() => setOpenCreate(false)}
+        onSuccess={() => {
+          setOpenCreate(false);
+          fetchData();
+        }}
+      />
 
-          <Form.Item name="truckId" label="Truck" rules={[{ required: true, message: "Pilih Truck" }]}>
-            <Select placeholder="Pilih Truck">
-              {trucks.map((t) => (
-                <Select.Option key={t.id} value={t.id}>{t.noPol}</Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
-
-          <Form.Item name="driverId" label="Driver" rules={[{ required: true, message: "Pilih Driver" }]}>
-            <Select placeholder="Pilih Driver">
-              {drivers.map((d) => (
-                <Select.Option key={d.id} value={d.id}>{d.name}</Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
-
-          <Form.Item name="customerIds" label="Customers" rules={[{ required: true, message: "Pilih minimal 1 customer" }]}>
-            <Select mode="multiple" placeholder="Pilih Customers">
-              {customers.map((c) => (
-                <Select.Option key={c.id} value={c.id}>{c.name}</Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
-
-          <Form.Item name="scheduleAt" label="Tanggal Schedule" rules={[{ required: true, message: "Pilih Tanggal" }]}>
-            <DatePicker className="w-full" format="YYYY-MM-DD" />
-          </Form.Item>
-
-          <Form.Item name="cycle" label="Cycle" rules={[{ required: true }]}>
-            <Input type="number" min={1} />
-          </Form.Item>
-
-          <div className="flex justify-end gap-2">
-            <Button onClick={() => setShowForm(false)}>Batal</Button>
-            <Button type="primary" htmlType="submit">
-              Simpan
-            </Button>
-          </div>
-        </Form>
-      </Modal>
+      <ModalUpdate
+        open={openUpdate}
+        data={selectedItem ?? null}
+        trucks={trucks}
+        drivers={drivers}
+        customers={customers}
+        onCancel={() => setOpenUpdate(false)}
+        onSuccess={() => {
+          setOpenUpdate(false);
+          fetchData();
+        }}
+      />
     </div>
   );
 }

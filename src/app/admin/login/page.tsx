@@ -1,140 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { ArrowLeftIcon } from "lucide-react";
+import { useEffect } from "react";
+import { withBasePath } from "@/src/lib/base-path";
+import { Spin } from "antd";
 
 export default function AdminLoginPage() {
-  const router = useRouter();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(true);
-
-  const [errorMsg, setErrorMsg] = useState("");
-
-  // 🔒
   useEffect(() => {
-    const checkToken = async () => {
-      try {
-        const res = await fetch("http://10.10.10.5:5055/auth/verify", {
-          method: "POST",
-          credentials: "include",
-        });
-
-        if (res.ok) {
-          router.replace("/admin/dashboard");
-        } else {
-          setCheckingAuth(false);
-        }
-      } catch (err) {
-        setCheckingAuth(false);
-      }
-    };
-
-    checkToken();
-  }, [router]);
-
-  const handleLogin = async () => {
-    setLoading(true);
-    setErrorMsg("");
-    try {
-      const res = await fetch("http://10.10.10.5:5055/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-        credentials: "include",
-      });
-
-      if (res.ok) {
-        router.push("/admin/dashboard");
-      } else {
-        const data = await res.json();
-        setErrorMsg(data.message || "Login gagal.");
-      }
-    } catch (error) {
-      setErrorMsg("Terjadi kesalahan saat login.");
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (checkingAuth) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-r from-blue-200 to-blue-50 text-gray-600">
-        <div className="w-12 h-12 border-4 border-blue-400 border-t-blue-600 rounded-full animate-spin mb-4"></div>
-        <p className="font-medium animate-pulse">Memuat...</p>
-      </div>
-    );
-  }
+    window.location.replace(withBasePath("/auth/login"));
+  }, []);
 
   return (
-    <main className="relative min-h-screen flex flex-col bg-gradient-to-r from-blue-200 to-blue-50 transition-colors duration-500">
-      {/* Tombol Kembali */}
-      <header className="absolute top-6 right-6 z-20 flex items-center gap-4">
-        <a
-          href="/"
-          aria-label="Back to Home"
-          className="w-10 h-10 flex items-center justify-center bg-black/60 hover:bg-black/80 text-white rounded-full shadow-lg transition-transform transform hover:scale-105"
-        >
-          <ArrowLeftIcon className="w-6 h-6" />
-        </a>
-      </header>
-
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-white/40 backdrop-blur-md transition-opacity duration-500" />
-
-      {/* Form Login */}
-      <section className="relative z-10 flex flex-1 items-center justify-center px-6">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!loading && username && password) handleLogin();
-          }}
-          className="rounded-2xl p-10 max-w-md w-full bg-white text-gray-900 border border-gray-300 shadow-xl flex flex-col gap-6 transition-all duration-300"
-        >
-          <h2 className="text-3xl font-bold text-center">🔐 Admin Login</h2>
-
-          {errorMsg && (
-            <div className="p-3 bg-red-100 border border-red-300 text-red-700 rounded-md text-sm text-center">
-              {errorMsg}
-            </div>
-          )}
-
-          <label className="block">
-            <span className="font-semibold mb-1 block">Username</span>
-            <input
-              type="text"
-              placeholder="Username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full rounded-md border border-gray-300 bg-white text-gray-900 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-              required
-            />
-          </label>
-
-          <label className="block">
-            <span className="font-semibold mb-1 block">Password</span>
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-md border border-gray-300 bg-white text-gray-900 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-              required
-            />
-          </label>
-
-          <button
-            type="submit"
-            disabled={loading || !username || !password}
-            className="w-full py-3 rounded-lg font-semibold bg-blue-600 hover:bg-blue-700 text-white transition transform hover:scale-105"
-          >
-            {loading ? "Logging in..." : "Login"}
-          </button>
-        </form>
-      </section>
-    </main>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 text-white">
+      <Spin size="large" />
+      <p className="mt-4 text-sm text-slate-300">Mengarahkan ke Vuteq SSO...</p>
+    </div>
   );
 }

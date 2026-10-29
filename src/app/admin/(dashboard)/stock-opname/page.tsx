@@ -1,421 +1,269 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { FiClipboard } from "react-icons/fi";
-import { Button, Modal, Form, Input, InputNumber, Space, Popconfirm, message, Select, Tag, Switch, Table, Row, Col } from "antd";
-import { PlusCircle, Trash2, CheckCircle, XCircle } from "lucide-react";
-import ModernTable from "@/src/app/components/ModernTable";
+import React, { useEffect, useState, useCallback } from 'react';
+import { Breadcrumb, message, Modal, Typography, Card, Row, Col, Statistic, Tag } from 'antd';
+import {
+  ReloadOutlined,
+  PlusOutlined,
+  DeleteOutlined,
+  CheckCircleOutlined,
+  AlertOutlined,
+  AuditOutlined,
+  RiseOutlined,
+  FallOutlined,
+} from '@ant-design/icons';
+import { useVuteqSso } from '@vuteq/sso-client-react/react';
+import { bffRequest } from '@/src/lib/client-api';
+import ToolbarWrapper from '@/src/app/components/ToolbarWrapper';
+import ButtonToolbar from '@/src/app/components/ButtonToolbar';
+import DataTable, { type StockOpname } from './_components/data-table';
+import ModalCreate from './_components/modal-create';
 
-interface StockOpname {
-  id: number;
-  opnameDate: string;
-  part2rId?: number;
-  part4rId?: number;
-  qtySystem: number;
-  qtyActual: number;
-  keterangan?: string;
-  pic?: string;
-  status: string;
-  part2r?: any;
-  part4r?: any;
+interface OpnameSummary {
+  totalAudited: number;
+  totalMatching: number;
+  totalSurplus: number;
+  totalDeficit: number;
+  accuracyRate: number;
+  totalSystemQty: number;
+  totalActualQty: number;
+  netDiffQty: number;
+  pendingCount: number;
+  approvedCount: number;
 }
 
 export default function StockOpnamePage() {
   const [data, setData] = useState<StockOpname[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  const [form] = Form.useForm();
-
+  const [summary, setSummary] = useState<OpnameSummary | null>(null);
   const [stock2R, setStock2R] = useState<any[]>([]);
   const [stock4R, setStock4R] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<StockOpname | undefined>(undefined);
+  const [openCreate, setOpenCreate] = useState(false);
 
-  const [selectedType, setSelectedType] = useState<"2R" | "4R" | null>(null);
-  const [isAllPart, setIsAllPart] = useState(false);
-  const [selectedPartIds, setSelectedPartIds] = useState<number[]>([]);
+  const { session } = useVuteqSso();
+  const userRole = (session?.roles?.[0] as string) || (session?.attributes?.RoleName as string) || 'none';
+  const isAdmin = userRole === 'admin' || (session?.globalRoles ?? []).includes('SUPER_ADMINISTRATOR') || (session?.globalRoles ?? []).includes('GLOBAL_ADMINISTRATOR');
+  const userPermissions = (session?.permissions as string[]) ?? [];
 
-  const [workspaceData, setWorkspaceData] = useState<any[]>([]);
+  const hasPerm = (perm: string) => {
+    if (isAdmin) return true;
+    return userPermissions.includes(perm) || userPermissions.includes('SUPER') || userPermissions.includes('*');
+  };
+
+  const canCreate = hasPerm('PACKER.STOCK_OPNAME_CREATE');
+  const canUpdate = hasPerm('PACKER.STOCK_OPNAME_UPDATE');
+  const canDelete = hasPerm('PACKER.STOCK_OPNAME_DELETE');
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [res, summaryRes] = await Promise.all([
+        bffRequest<StockOpname[] | { data: StockOpname[] }>('stock-opname'),
+        bffRequest<OpnameSummary>('stock-opname/summary').catch(() => null),
+      ]);
+      const list = Array.isArray(res) ? res : res.data || [];
+      setData(list);
+      if (summaryRes) setSummary(summaryRes);
+
+      if (selectedItem) {
+        const stillExists = list.find((s) => s.id === selectedItem.id);
+        setSelectedItem(stillExists);
+      }
+    } catch (err: any) {
+      message.error(err.message || 'Gagal mengambil data stock opname');
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedItem]);
+
+  const fetchStocks = async () => {
+    try {
+      const [res2r, res4r] = await Promise.all([
+        bffRequest<any[]>('stock/2r'),
+        bffRequest<any[]>('stock/4r'),
+      ]);
+      setStock2R(Array.isArray(res2r) ? res2r : (res2r as any)?.data || []);
+      setStock4R(Array.isArray(res4r) ? res4r : (res4r as any)?.data || []);
+    } catch (err) {
+      console.error('Gagal mengambil data master stock', err);
+    }
+  };
 
   useEffect(() => {
     fetchData();
     fetchStocks();
   }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const updateStatus = async (id: number, status: string) => {
     try {
-      const res = await fetch("http://10.10.10.5:5055/stock-opname", { credentials: "include" });
-      const json = await res.json();
-      setData(json);
-    } catch (err) {
-      message.error("Gagal mengambil data stock opname");
-    }
-    setLoading(false);
-  };
-
-  const fetchStocks = async () => {
-    try {
-      const [res2r, res4r] = await Promise.all([
-        fetch("http://10.10.10.5:5055/stock/2r", { credentials: "include" }),
-        fetch("http://10.10.10.5:5055/stock/4r", { credentials: "include" }),
-      ]);
-      setStock2R(await res2r.json());
-      setStock4R(await res4r.json());
-    } catch (err) {
-      console.error("Gagal mengambil data stock");
-    }
-  };
-
-  // Trigger when type, all-part toggle, or selected parts change
-  useEffect(() => {
-    if (!selectedType) {
-      setWorkspaceData([]);
-      return;
-    }
-
-    const currentStockList = selectedType === "2R" ? stock2R : stock4R;
-
-    let filteredStocks = [];
-    if (isAllPart) {
-      filteredStocks = currentStockList;
-    } else {
-      filteredStocks = currentStockList.filter((s) => {
-        const pId = selectedType === "2R" ? s.part2r?.id : s.part4r?.id;
-        return selectedPartIds.includes(pId);
+      await bffRequest(`stock-opname/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
       });
-    }
-
-    const newWorkspaceData = filteredStocks.map(s => {
-      const part = selectedType === "2R" ? s.part2r : s.part4r;
-      // Pertahankan qtyActual & keterangan jika sudah pernah diisi
-      const existing = workspaceData.find(w => w.partId === part?.id);
-      return {
-        partId: part?.id,
-        partNum: part?.oeNo || part?.codeNo || "-",
-        partName: part?.model || part?.emiPartName || "-",
-        qtySystem: s.totalStock || 0,
-        qtyActual: existing ? existing.qtyActual : 0,
-        keterangan: existing ? existing.keterangan : "",
-      };
-    });
-
-    setWorkspaceData(newWorkspaceData);
-  }, [selectedType, isAllPart, selectedPartIds, stock2R, stock4R]);
-
-  const handleSave = async (values: any) => {
-    if (workspaceData.length === 0) {
-      message.warning("Pilih minimal 1 part untuk di-opname.");
-      return;
-    }
-
-    const payload = workspaceData.map(w => ({
-      part2rId: selectedType === "2R" ? w.partId : null,
-      part4rId: selectedType === "4R" ? w.partId : null,
-      qtySystem: w.qtySystem,
-      qtyActual: w.qtyActual,
-      keterangan: w.keterangan,
-      pic: values.pic,
-      status: "PENDING",
-    }));
-
-    try {
-      const res = await fetch(`http://10.10.10.5:5055/stock-opname`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
-
-      if (res.ok) {
-        message.success(`Data stock opname berhasil disimpan`);
-        setShowForm(false);
-        fetchData();
-      } else {
-        message.error("Gagal menyimpan data stock opname");
-      }
-    } catch (error) {
-      message.error("Terjadi kesalahan jaringan");
+      message.success(`Status berhasil diubah menjadi ${status}`);
+      fetchData();
+    } catch (err: any) {
+      message.error(err.message || 'Gagal mengubah status');
     }
   };
 
   const handleDelete = async (id: number) => {
     try {
-      await fetch(`http://10.10.10.5:5055/stock-opname/${id}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      message.success("Data dihapus");
+      await bffRequest(`stock-opname/${id}`, { method: 'DELETE' });
+      message.success('Stock Opname berhasil dihapus');
+      if (selectedItem?.id === id) setSelectedItem(undefined);
       fetchData();
-    } catch (err) {
-      message.error("Gagal menghapus data");
+    } catch (err: any) {
+      message.error(err.message || 'Gagal menghapus stock opname');
     }
   };
-
-  const updateStatus = async (id: number, status: string) => {
-    try {
-      await fetch(`http://10.10.10.5:5055/stock-opname/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ status }),
-      });
-      message.success(`Status diubah menjadi ${status}`);
-      fetchData();
-    } catch (err) {
-      message.error("Gagal mengubah status");
-    }
-  };
-
-  const openNewForm = () => {
-    form.resetFields();
-    setSelectedType(null);
-    setIsAllPart(false);
-    setSelectedPartIds([]);
-    setWorkspaceData([]);
-    setShowForm(true);
-  };
-
-  const columns: any = [
-    {
-      title: "Tanggal",
-      dataIndex: "opnameDate",
-      key: "opnameDate",
-      render: (text: string) => new Date(text).toLocaleDateString("id-ID"),
-    },
-    {
-      title: "Part / Model",
-      key: "part",
-      render: (_: any, record: StockOpname) => {
-        if (record.part2r) return <Tag color="cyan">2R: {record.part2r.model || record.part2r.oeNo}</Tag>;
-        if (record.part4r) return <Tag color="magenta">4R: {record.part4r.model || record.part4r.oeNo}</Tag>;
-        return "-";
-      },
-    },
-    {
-      title: "Qty System",
-      dataIndex: "qtySystem",
-      key: "qtySystem",
-      align: "center",
-      render: (val: number) => <span className="font-semibold text-gray-500">{val}</span>,
-    },
-    {
-      title: "Qty Actual",
-      dataIndex: "qtyActual",
-      key: "qtyActual",
-      align: "center",
-      render: (val: number) => <span className="font-bold text-blue-600">{val}</span>,
-    },
-    {
-      title: "Selisih",
-      key: "selisih",
-      align: "center",
-      render: (_: any, record: StockOpname) => {
-        const diff = record.qtyActual - record.qtySystem;
-        const color = diff === 0 ? "green" : diff > 0 ? "blue" : "red";
-        return <span style={{ color, fontWeight: 'bold' }}>{diff > 0 ? `+${diff}` : diff}</span>;
-      },
-    },
-    {
-      title: "PIC",
-      dataIndex: "pic",
-      key: "pic",
-    },
-    {
-      title: "Status",
-      dataIndex: "status",
-      key: "status",
-      render: (status: string) => (
-        <Tag color={status === "APPROVED" ? "green" : status === "REJECTED" ? "red" : "orange"}>
-          {status}
-        </Tag>
-      ),
-    },
-    {
-      title: "Aksi",
-      key: "action",
-      width: 150,
-      disableSearch: true,
-      render: (_: any, record: StockOpname) => (
-        <Space>
-          {record.status === "PENDING" && (
-            <>
-              <Button
-                type="text"
-                className="text-green-500 hover:text-green-600 p-0"
-                icon={<CheckCircle size={16} />}
-                onClick={() => updateStatus(record.id, "APPROVED")}
-              />
-              <Button
-                type="text"
-                className="text-red-500 hover:text-red-600 p-0"
-                icon={<XCircle size={16} />}
-                onClick={() => updateStatus(record.id, "REJECTED")}
-              />
-            </>
-          )}
-          <Popconfirm
-            title="Hapus data opname ini?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Ya"
-            cancelText="Batal"
-          >
-            <Button type="text" danger icon={<Trash2 size={16} />} />
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ];
-
-  const workspaceColumns = [
-    { title: "Part Number", dataIndex: "partNum", width: "15%" },
-    { title: "Part Name / Model", dataIndex: "partName", width: "25%" },
-    {
-      title: "Qty System",
-      dataIndex: "qtySystem",
-      width: "15%",
-      render: (val: number) => <span className="font-semibold">{val}</span>
-    },
-    {
-      title: "Qty Actual",
-      key: "qtyActual",
-      width: "15%",
-      render: (_: any, record: any, index: number) => (
-        <InputNumber
-          min={0}
-          value={record.qtyActual}
-          onChange={(val) => {
-            const newData = [...workspaceData];
-            newData[index].qtyActual = val || 0;
-            setWorkspaceData(newData);
-          }}
-          className="w-full"
-        />
-      ),
-    },
-    {
-      title: "Remark / Keterangan",
-      key: "keterangan",
-      width: "30%",
-      render: (_: any, record: any, index: number) => (
-        <Input
-          placeholder="Alasan selisih..."
-          value={record.keterangan}
-          onChange={(e) => {
-            const newData = [...workspaceData];
-            newData[index].keterangan = e.target.value;
-            setWorkspaceData(newData);
-          }}
-        />
-      ),
-    },
-  ];
 
   return (
-    <div className="w-full">
-      <ModernTable
-        title="Stock Opname Workspace"
-        icon={<FiClipboard size={24} className="text-purple-600" />}
-        extraActions={
-          <Button type="primary" icon={<PlusCircle size={16} />} onClick={openNewForm}>
-            Input Stock Opname
-          </Button>
-        }
-        columns={columns}
-        dataSource={data}
-        rowKey="id"
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }} className="space-y-3">
+      {/* Header & Breadcrumb */}
+      <div style={{ flexShrink: 0 }}>
+        <Breadcrumb
+          items={[
+            { title: 'Home' },
+            { title: 'Stock Management' },
+            { title: 'Stock Opname (Stockist Audit)' },
+          ]}
+        />
+        <div className="flex items-center justify-between mt-1">
+          <div>
+            <Typography.Title level={4} style={{ margin: 0 }}>
+              Stock Opname & Verifikasi Fisik (Stockist)
+            </Typography.Title>
+            <Typography.Text type="secondary" className="text-xs">
+              Audit fisik berkala oleh Petugas Stockist untuk menjaga kestabilan saldo gudang (Beginning, IN, OUT, dan Selisih Fisik).
+            </Typography.Text>
+          </div>
+        </div>
+      </div>
+
+      {/* KPI Summary Cards */}
+      {summary && (
+        <Row gutter={[12, 12]} style={{ flexShrink: 0 }}>
+          <Col xs={12} sm={6}>
+            <Card size="small" className="shadow-sm border-gray-200 bg-gradient-to-br from-blue-50/50 to-white">
+              <Statistic
+                title={<span className="text-xs font-semibold text-gray-500">Total Item Di-Audit</span>}
+                value={summary.totalAudited}
+                suffix={<span className="text-xs text-gray-400">part</span>}
+                prefix={<AuditOutlined className="text-blue-500 mr-1" />}
+              />
+              <div className="text-[11px] text-gray-500 mt-1">
+                Pending: <Tag color="warning" className="m-0 text-[10px]">{summary.pendingCount}</Tag> | Disetujui: <Tag color="success" className="m-0 text-[10px]">{summary.approvedCount}</Tag>
+              </div>
+            </Card>
+          </Col>
+          <Col xs={12} sm={6}>
+            <Card size="small" className="shadow-sm border-gray-200 bg-gradient-to-br from-green-50/50 to-white">
+              <Statistic
+                title={<span className="text-xs font-semibold text-gray-500">Tingkat Akurasi Stok</span>}
+                value={summary.accuracyRate}
+                precision={1}
+                suffix="%"
+                valueStyle={{ color: summary.accuracyRate >= 95 ? '#3f8600' : '#cf1322' }}
+                prefix={<CheckCircleOutlined className="text-green-500 mr-1" />}
+              />
+              <div className="text-[11px] text-gray-500 mt-1">
+                Fisik Cocok: <strong className="text-green-600">{summary.totalMatching}</strong> dari {summary.totalAudited} item
+              </div>
+            </Card>
+          </Col>
+          <Col xs={12} sm={6}>
+            <Card size="small" className="shadow-sm border-gray-200 bg-gradient-to-br from-indigo-50/50 to-white">
+              <Statistic
+                title={<span className="text-xs font-semibold text-gray-500">Part Surplus (Lebih)</span>}
+                value={summary.totalSurplus}
+                valueStyle={{ color: '#1890ff' }}
+                prefix={<RiseOutlined className="text-blue-500 mr-1" />}
+                suffix={<span className="text-xs text-gray-400">part</span>}
+              />
+              <div className="text-[11px] text-gray-500 mt-1">
+                Fisik aktual &gt; saldo sistem buku
+              </div>
+            </Card>
+          </Col>
+          <Col xs={12} sm={6}>
+            <Card size="small" className="shadow-sm border-gray-200 bg-gradient-to-br from-red-50/50 to-white">
+              <Statistic
+                title={<span className="text-xs font-semibold text-gray-500">Part Defisit (Kurang)</span>}
+                value={summary.totalDeficit}
+                valueStyle={{ color: summary.totalDeficit > 0 ? '#cf1322' : '#3f8600' }}
+                prefix={<FallOutlined className="text-red-500 mr-1" />}
+                suffix={<span className="text-xs text-gray-400">part</span>}
+              />
+              <div className="text-[11px] text-gray-500 mt-1">
+                Net Selisih: <strong className={summary.netDiffQty >= 0 ? 'text-blue-600' : 'text-red-600'}>{summary.netDiffQty > 0 ? `+${summary.netDiffQty}` : summary.netDiffQty} pcs</strong>
+              </div>
+            </Card>
+          </Col>
+        </Row>
+      )}
+
+      {/* Toolbar Standard */}
+      <div style={{ flexShrink: 0 }}>
+        <ToolbarWrapper>
+          <ButtonToolbar
+            title="Refresh"
+            icon={<ReloadOutlined />}
+            onClick={fetchData}
+            loading={loading}
+          />
+          <ButtonToolbar
+            title="Audit Stock Opname Baru"
+            icon={<PlusOutlined />}
+            onClick={() => setOpenCreate(true)}
+            enable={canCreate}
+          />
+          <ButtonToolbar
+            title="Hapus"
+            icon={<DeleteOutlined />}
+            onClick={() => {
+              if (!selectedItem) return;
+              Modal.confirm({
+                title: 'Hapus Stock Opname',
+                content: `Apakah Anda yakin ingin menghapus data opname ID ${selectedItem.id}?`,
+                okText: 'Hapus',
+                okButtonProps: { danger: true },
+                cancelText: 'Batal',
+                onOk: () => handleDelete(selectedItem.id),
+              });
+            }}
+            enable={Boolean(selectedItem) && canDelete}
+            danger
+          />
+        </ToolbarWrapper>
+      </div>
+
+      {/* Data Table */}
+      <DataTable
+        data={data}
         loading={loading}
+        selectedKey={selectedItem?.id}
+        onSelectRow={setSelectedItem}
+        onApprove={(id) => updateStatus(id, 'APPROVED')}
+        onReject={(id) => updateStatus(id, 'REJECTED')}
+        onDelete={handleDelete}
+        canUpdate={canUpdate}
+        canDelete={canDelete}
       />
 
-      <Modal
-        title="Input Data Stock Opname (Batch)"
-        open={showForm}
-        onCancel={() => setShowForm(false)}
-        footer={null}
-        width={1000}
-      >
-        <Form form={form} layout="vertical" onFinish={handleSave}>
-          <Row gutter={16}>
-            <Col span={6}>
-              <Form.Item
-                name="type"
-                label="Tipe Part"
-                rules={[{ required: true, message: "Pilih tipe part" }]}
-              >
-                <Select
-                  placeholder="Pilih 2R / 4R"
-                  onChange={(val) => setSelectedType(val)}
-                  options={[
-                    { label: "Part 2R", value: "2R" },
-                    { label: "Part 4R", value: "4R" },
-                  ]}
-                />
-              </Form.Item>
-            </Col>
-
-            <Col span={14}>
-              <Form.Item label="Pilih Model / Part">
-                <Select
-                  mode="multiple"
-                  showSearch
-                  placeholder="Cari part... (bisa pilih banyak)"
-                  optionFilterProp="children"
-                  disabled={!selectedType || isAllPart}
-                  value={selectedPartIds}
-                  onChange={(val) => setSelectedPartIds(val)}
-                  options={(selectedType === "2R" ? stock2R : stock4R).map((s) => {
-                    const p = selectedType === "2R" ? s.part2r : s.part4r;
-                    return {
-                      label: `${p?.model || '-'} (${p?.oeNo || '-'})`,
-                      value: p?.id,
-                    };
-                  })}
-                />
-              </Form.Item>
-            </Col>
-
-            <Col span={4}>
-              <Form.Item label="All Part">
-                <Switch
-                  checked={isAllPart}
-                  onChange={(checked) => setIsAllPart(checked)}
-                  disabled={!selectedType}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item
-            name="pic"
-            label="Nama PIC (Penanggung Jawab)"
-            rules={[{ required: true, message: "Nama PIC wajib diisi" }]}
-          >
-            <Input placeholder="Masukkan nama" />
-          </Form.Item>
-
-          {workspaceData.length > 0 && (
-            <div className="mt-4 mb-6 border rounded-lg overflow-hidden">
-              <div className="bg-gray-50 p-3 border-b">
-                <h3 className="font-semibold m-0 text-blue-700">Workspace Input Stock</h3>
-                <p className="text-xs text-gray-500 m-0">Input Qty Actual dan Remark untuk masing-masing Part di bawah ini.</p>
-              </div>
-              <Table
-                dataSource={workspaceData}
-                columns={workspaceColumns}
-                rowKey="partId"
-                pagination={false}
-                size="small"
-                scroll={{ y: 300 }}
-              />
-            </div>
-          )}
-
-          <div className="flex justify-end gap-2">
-            <Button onClick={() => setShowForm(false)}>Batal</Button>
-            <Button type="primary" htmlType="submit" disabled={workspaceData.length === 0}>
-              Simpan Batch Opname
-            </Button>
-          </div>
-        </Form>
-      </Modal>
+      {/* Modals */}
+      <ModalCreate
+        open={openCreate}
+        onCancel={() => setOpenCreate(false)}
+        onSuccess={() => {
+          setOpenCreate(false);
+          fetchData();
+        }}
+        stock2R={stock2R}
+        stock4R={stock4R}
+      />
     </div>
   );
 }

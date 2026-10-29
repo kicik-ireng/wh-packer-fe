@@ -1,273 +1,184 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { PackageCheck, Pencil, Download, Upload } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { Button, Modal, Form, Input, InputNumber, Space, message } from "antd";
-import ModernTable from "@/src/app/components/ModernTable";
-
-interface Stock4R {
-  id: number;
-  totalStock: number;
-  rack: string;
-  part4r: {
-    id: number;
-    codeNo: string;
-    assyNo16: string;
-    assyNo10: string;
-    oeNo: string;
-    model: string;
-    kpp: string;
-    kppNp: string;
-    customer: string;
-    segment: string;
-  };
-}
+import React, { useEffect, useState, useCallback } from 'react';
+import { Breadcrumb, message, Typography } from 'antd';
+import {
+  ReloadOutlined,
+  EditOutlined,
+  UploadOutlined,
+  DownloadOutlined,
+  FileTextOutlined,
+} from '@ant-design/icons';
+import { useVuteqSso } from '@vuteq/sso-client-react/react';
+import { bffRequest } from '@/src/lib/client-api';
+import { withBasePath } from '@/src/lib/base-path';
+import ToolbarWrapper from '@/src/app/components/ToolbarWrapper';
+import ButtonToolbar from '@/src/app/components/ButtonToolbar';
+import DataTable, { type Stock4R } from './_components/data-table';
+import ModalUpdate from './_components/modal-update';
+import ModalImport from './_components/modal-import';
+import ModalStockCard from '@/src/app/components/ModalStockCard';
 
 export default function Stock4RPage() {
   const [data, setData] = useState<Stock4R[]>([]);
-  const [loading, setLoading] = useState(true);
-  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<Stock4R | undefined>(undefined);
+  const [openUpdate, setOpenUpdate] = useState(false);
+  const [openImport, setOpenImport] = useState(false);
+  const [openStockCard, setOpenStockCard] = useState(false);
+  const [cardPart, setCardPart] = useState<{ id: number; name: string } | null>(null);
 
-  // Modal Update 1/1
-  const [showEditForm, setShowEditForm] = useState(false);
-  const [editingItem, setEditingItem] = useState<Stock4R | null>(null);
-  const [form] = Form.useForm();
+  const { session } = useVuteqSso();
+  const userRole = (session?.roles?.[0] as string) || (session?.attributes?.RoleName as string) || 'none';
+  const isAdmin = userRole === 'admin' || (session?.globalRoles ?? []).includes('SUPER_ADMINISTRATOR') || (session?.globalRoles ?? []).includes('GLOBAL_ADMINISTRATOR');
+  const userPermissions = (session?.permissions as string[]) ?? [];
 
-  // Modal Import Excel
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
+  const hasPerm = (perm: string) => {
+    if (isAdmin) return true;
+    return userPermissions.includes(perm) || userPermissions.includes('SUPER') || userPermissions.includes('*');
+  };
 
-  const fetchData = async () => {
+  const canRead = hasPerm('PACKER.STOCK_READ');
+  const canUpdate = hasPerm('PACKER.STOCK_UPDATE');
+
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://10.10.10.5:5055/stock/4r", {
-        credentials: "include",
-        cache: "no-cache",
-      });
-      const json = await res.json();
-      setData(json);
-    } catch (err) {
-      message.error("Gagal ambil data stock");
+      const res = await bffRequest<Stock4R[] | { data: Stock4R[] }>('stock/4r');
+      const list = Array.isArray(res) ? res : res.data || [];
+      setData(list);
+      if (selectedItem) {
+        const stillExists = list.find((s) => s.id === selectedItem.id);
+        setSelectedItem(stillExists);
+      }
+    } catch (err: any) {
+      message.error(err.message || 'Gagal mengambil data Stock 4R');
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedItem]);
 
   useEffect(() => {
-    fetch("http://10.10.10.5:5055/auth/verify", {
-      method: "POST",
-      credentials: "include",
-    }).then((res) => {
-      if (!res.ok) router.replace("/admin/login");
-    });
     fetchData();
   }, []);
 
   const handleDownloadTemplate = () => {
-    window.open("http://10.10.10.5:5055/stock/export/4r", "_blank");
+    window.open(withBasePath('/api/proxy/stock/export/4r'), '_blank');
   };
-
-  const handleUploadStock = async () => {
-    if (!file) {
-      message.warning("Pilih file excel terlebih dahulu");
-      return;
-    }
-    setUploading(true);
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-      const res = await fetch("http://10.10.10.5:5055/stock/upload/4r", {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-      });
-      const resData = await res.json();
-      if (!res.ok) throw new Error(resData.message || "Gagal upload");
-      message.success("Berhasil upload stock");
-      setShowImportModal(false);
-      setFile(null);
-      fetchData();
-    } catch (err: any) {
-      message.error(err.message || "Gagal upload");
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleSaveEdit = async (values: any) => {
-    if (!editingItem) return;
-
-    try {
-      // Update Stock Qty
-      if (values.totalStock !== editingItem.totalStock) {
-        const resQty = await fetch("http://10.10.10.5:5055/stock/update-part-4r", {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            partId: editingItem.part4r.id,
-            newQty: values.totalStock,
-          }),
-        });
-        if (!resQty.ok) throw new Error("Gagal update stock qty");
-      }
-
-      // Update Rack
-      if (values.rack !== editingItem.rack) {
-        const resRack = await fetch(`http://10.10.10.5:5055/stock/4r/rack/${editingItem.id}`, {
-          method: "PATCH",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ rack: values.rack }),
-        });
-        if (!resRack.ok) throw new Error("Gagal update rack");
-      }
-
-      message.success("Berhasil update data");
-      setShowEditForm(false);
-      fetchData();
-    } catch (e: any) {
-      message.error(e.message || "Terjadi kesalahan saat update");
-    }
-  };
-
-  const openEdit = (item: Stock4R) => {
-    setEditingItem(item);
-    form.setFieldsValue({
-      totalStock: item.totalStock,
-      rack: item.rack,
-    });
-    setShowEditForm(true);
-  };
-
-  const columns: any = [
-    { title: "AssyNo16", dataIndex: ["part4r", "assyNo16"], key: "assyNo16" },
-    { title: "AssyNo10", dataIndex: ["part4r", "assyNo10"], key: "assyNo10" },
-    { title: "OE No", dataIndex: ["part4r", "oeNo"], key: "oeNo" },
-    { title: "Model", dataIndex: ["part4r", "model"], key: "model" },
-    { title: "KPP", dataIndex: ["part4r", "kpp"], key: "kpp" },
-    { title: "KPP NP", dataIndex: ["part4r", "kppNp"], key: "kppNp" },
-    { title: "Customer", dataIndex: ["part4r", "customer"], key: "customer" },
-    { title: "Segment", dataIndex: ["part4r", "segment"], key: "segment" },
-    {
-      title: "Qty",
-      dataIndex: "totalStock",
-      key: "totalStock",
-      render: (val: number) => <span className="font-semibold text-blue-600">{val}</span>
-    },
-    { title: "Rack", dataIndex: "rack", key: "rack" },
-    {
-      title: "Aksi",
-      key: "action",
-      width: 100,
-      disableSearch: true,
-      render: (_: any, record: Stock4R) => (
-        <Button
-          type="primary"
-          size="small"
-          icon={<Pencil size={14} />}
-          onClick={() => openEdit(record)}
-        >
-          Edit
-        </Button>
-      ),
-    },
-  ];
 
   return (
-    <div className="w-full">
-      <ModernTable
-        title="Stock 4R Management"
-        icon={<PackageCheck size={24} className="text-blue-600" />}
-        extraActions={
-          <Space>
-            <Button
-              icon={<Download size={16} />}
-              onClick={handleDownloadTemplate}
-            >
-              Download Template
-            </Button>
-            <Button
-              type="primary"
-              icon={<Upload size={16} />}
-              onClick={() => setShowImportModal(true)}
-            >
-              Import Stock
-            </Button>
-          </Space>
-        }
-        columns={columns}
-        dataSource={data}
-        rowKey="id"
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      <div style={{ flexShrink: 0, marginBottom: 8 }}>
+        <Breadcrumb
+          items={[
+            { title: 'Home' },
+            { title: 'Stock Management' },
+            { title: 'Stock 4R' },
+          ]}
+        />
+        <div className="flex items-center justify-between mt-1">
+          <Typography.Title level={4} style={{ margin: 0 }}>
+            Stock Finished Goods 4R
+          </Typography.Title>
+        </div>
+      </div>
+
+      {/* Toolbar Standard */}
+      <div style={{ flexShrink: 0 }}>
+        <ToolbarWrapper>
+          <ButtonToolbar
+            title="Refresh"
+            icon={<ReloadOutlined />}
+            onClick={fetchData}
+            loading={loading}
+          />
+          <ButtonToolbar
+            title="Kartu Stok"
+            icon={<FileTextOutlined />}
+            onClick={() => {
+              const partId = selectedItem?.part4r?.id || selectedItem?.part4rId;
+              if (partId && selectedItem) {
+                setCardPart({
+                  id: partId,
+                  name: `${selectedItem.part4r?.model || ''} - ${selectedItem.part4r?.oeNo || selectedItem.part4r?.assyNo16 || ''}`,
+                });
+                setOpenStockCard(true);
+              }
+            }}
+            enable={Boolean(selectedItem)}
+          />
+          <ButtonToolbar
+            title="Edit Stock / Rak"
+            icon={<EditOutlined />}
+            onClick={() => selectedItem && setOpenUpdate(true)}
+            enable={Boolean(selectedItem) && canUpdate}
+          />
+          <ButtonToolbar
+            title="Import Excel"
+            icon={<UploadOutlined />}
+            onClick={() => setOpenImport(true)}
+            enable={canUpdate}
+          />
+          <ButtonToolbar
+            title="Download Template"
+            icon={<DownloadOutlined />}
+            onClick={handleDownloadTemplate}
+            enable={canRead}
+          />
+        </ToolbarWrapper>
+      </div>
+
+      {/* Data Table */}
+      <DataTable
+        data={data}
         loading={loading}
+        selectedKey={selectedItem?.id}
+        onSelectRow={setSelectedItem}
+        onEdit={(item) => {
+          setSelectedItem(item);
+          setOpenUpdate(true);
+        }}
+        onViewCard={(item) => {
+          const partId = item?.part4r?.id || item?.part4rId;
+          if (partId) {
+            setSelectedItem(item);
+            setCardPart({
+              id: partId,
+              name: `${item.part4r?.model || ''} - ${item.part4r?.oeNo || item.part4r?.assyNo16 || ''}`,
+            });
+            setOpenStockCard(true);
+          }
+        }}
+        canUpdate={canUpdate}
       />
 
-      {/* Modal Edit 1/1 */}
-      <Modal
-        title="Update Stock & Rack"
-        open={showEditForm}
-        onCancel={() => setShowEditForm(false)}
-        footer={null}
-      >
-        <Form form={form} layout="vertical" onFinish={handleSaveEdit}>
-          <div className="mb-4 p-3 bg-blue-50 rounded-md border border-blue-100">
-            <p className="text-sm text-gray-700 m-0">
-              <strong>Assy No 16:</strong> {editingItem?.part4r?.assyNo16}
-            </p>
-            <p className="text-sm text-gray-700 m-0">
-              <strong>Model:</strong> {editingItem?.part4r?.model}
-            </p>
-          </div>
+      {/* Modals */}
+      <ModalUpdate
+        open={openUpdate}
+        data={selectedItem ?? null}
+        onCancel={() => setOpenUpdate(false)}
+        onSuccess={() => {
+          setOpenUpdate(false);
+          fetchData();
+        }}
+      />
 
-          <Form.Item
-            name="totalStock"
-            label="Total Stock (Qty)"
-            rules={[{ required: true, message: "Qty wajib diisi" }]}
-          >
-            <InputNumber className="w-full" min={0} />
-          </Form.Item>
+      <ModalImport
+        open={openImport}
+        onCancel={() => setOpenImport(false)}
+        onSuccess={() => {
+          setOpenImport(false);
+          fetchData();
+        }}
+      />
 
-          <Form.Item
-            name="rack"
-            label="Rack Location"
-          >
-            <Input placeholder="Masukkan lokasi rak" />
-          </Form.Item>
-
-          <div className="flex justify-end gap-2 mt-6">
-            <Button onClick={() => setShowEditForm(false)}>Batal</Button>
-            <Button type="primary" htmlType="submit">
-              Simpan Perubahan
-            </Button>
-          </div>
-        </Form>
-      </Modal>
-
-      {/* Modal Import */}
-      <Modal
-        title="Import Stock dari Excel"
-        open={showImportModal}
-        onCancel={() => setShowImportModal(false)}
-        confirmLoading={uploading}
-        onOk={handleUploadStock}
-        okText="Upload"
-        cancelText="Batal"
-      >
-        <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg text-center bg-gray-50">
-          <input
-            type="file"
-            accept=".xlsx, .xls"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-            className="w-full"
-          />
-          <p className="mt-2 text-sm text-gray-500">
-            Pastikan file menggunakan format template yang didapat dari tombol "Download Template".
-          </p>
-        </div>
-      </Modal>
+      <ModalStockCard
+        open={openStockCard}
+        onClose={() => setOpenStockCard(false)}
+        type="4r"
+        partId={cardPart?.id}
+        partName={cardPart?.name}
+      />
     </div>
   );
 }

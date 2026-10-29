@@ -3,13 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 5000",
+    "dev": "next dev -p 3000",
     "build": "next build",
-    "start": "next start -p 5000",
+    "start": "next start -p 3000",
     "lint": "next lint",
-    "start:prod": "next start -p 5000"
+    "start:prod": "next start -p 3000"
   },
   "dependencies": {
+    "@ant-design/icons": "^6.3.4",
     "@heroicons/react": "^2.2.0",
     "@prisma/client": "^6.8.2",
     "@radix-ui/react-dialog": "^1.1.14",
@@ -19,6 +20,8 @@
     "@radix-ui/react-select": "^2.2.5",
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-toast": "^1.2.14",
+    "@types/ioredis": "^4.28.10",
+    "@vuteq/sso-client-react": "file:vendor/vuteq-sso-client-react-0.2.1.tgz",
     "antd": "^5.26.6",
     "apexcharts": "^4.7.0",
     "axios": "^1.11.0",
@@ -28,6 +31,7 @@
     "file-saver": "^2.0.5",
     "formidable": "^3.5.4",
     "framer-motion": "^12.16.0",
+    "ioredis": "^6.0.0",
     "jsonwebtoken": "^9.0.2",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.511.0",

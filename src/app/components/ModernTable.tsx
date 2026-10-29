@@ -119,7 +119,7 @@ export default function ModernTable<T extends object>({
         </div>
       ),
       filterIcon: (filtered: boolean) => (
-        <SearchOutlined style={{ color: filtered ? "#1677ff" : undefined }} />
+        <SearchOutlined style={{ color: filtered ? "#4F46E5" : undefined }} />
       ),
       onFilter: (value: any, record: any) => {
         // Handle nested dataIndex like ['part4r', 'assyNo10']
@@ -170,6 +170,7 @@ export default function ModernTable<T extends object>({
           </Space>
         )}
         <Table
+          className="small-table"
           dataSource={dataSource}
           columns={enhancedColumns}
           loading={loading}
